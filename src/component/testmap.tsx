@@ -1,6 +1,7 @@
 // src/components/CompanyMap.tsx
 import React from 'react';
 import Draggable from 'react-draggable';
+import './index.css';
 
 const CompanyMap: React.FC = () => {
   return (

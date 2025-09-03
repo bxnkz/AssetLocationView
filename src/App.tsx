@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
-import './App.css';
+// import './App.css';
 import axios from "axios";
 import Navbar from "./Navbar";
+import './index.css';
+// import ProductList from "./component";
 
 interface User {
   name: string;
@@ -12,6 +14,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false); 
+
+  const [selectedFloor,setSelectedFloor] = useState("FL1");
 
   const FRONTEND_URL = "https://ratiphong.tips.co.th:5173";
 
@@ -61,22 +65,37 @@ function App() {
   if (loading) return <div>Loading...</div>;
   if (!user && !loggingOut) return <div>Redirect to Log in...</div>;
 
+  const getImageSrc = () =>{
+    switch(selectedFloor){
+      case "FL1":
+        return "./src/img/TIPS_B4_FL1.png";
+      case "FL2":
+        return "./src/img/TIPS_B4_FL2.png";
+      case "FL3_1":
+        return "./src/img/TIPS_B4_FL3-1.png";
+      case "FL3_2":
+        return "./src/img/TIPS_B4_FL3-2.png";
+      case "FL4":
+        return "./src/img/TIPS_B4_FL4.png";
+      default:
+        return "./src/img/TIPS_B4_FL1.png";
+    }
+  }
+
   return (
-    <div>
-      <Navbar name={user?.name || ""} onLogout={handleLogout} />
-      <div className="p-4">
-        {/* <h1>Welcome, {user?.name}</h1> */}
-        {/* <ProductList /> */}
-      </div>
-     <div style={{ textAlign: "center", marginTop: "20px" }}>
-        <img 
-          src="./src/img/TIPS_B4_FL1.png"  
-          alt="My Image" 
-          style={{ maxWidth: "100%", height: "auto" }}
-        />
-      </div>
-    </div>
-  );
+  <div className="flex flex-col min-h-screen">
+    <Navbar name={user?.name || ""} onLogout={handleLogout} selectedFloor={selectedFloor} onFloorChange={setSelectedFloor}/>
+
+    <main className="flex-1 p-4 flex justify-center items-center">
+      <img 
+        src={getImageSrc()} 
+        alt="Floor Image" 
+        className="max-w-full h-auto"
+      />
+    </main>
+  </div>
+);
+
 }
 
 export default App;

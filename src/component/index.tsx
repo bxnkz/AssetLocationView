@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+// import './App.css';
+import './index.css';
 
 interface Product {
   prodCode: string;
