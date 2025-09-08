@@ -5,76 +5,70 @@ import FloorImage from "./components/FloorImage";
 import AssetImage from "./components/AssetImage";
 import Sidebar from "./components/Sidebar";
 import FloatingButton from "./components/FloatingButton";
-// import ProductList from "./components";
 import { Stage, Layer } from "react-konva";
-
-interface User {
-  name: string;
-}
+import { Auth } from "./hooks/Auth";
 
 interface AssetType {
   name: string;
+  assetCode?: string;
   x: number;
   y: number;
 }
 
+interface Product {
+  assetCode: string;
+  name: string;
+}
+
+interface ApiProduct {
+  assetCode: string;
+  prodName: string;
+  prodDesc: string;
+  ip: string;
+  serial: string;
+}
+
 function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
+  const { user, loading, loggingOut, handleLogout } = Auth();
 
   const [selectedFloor, setSelectedFloor] = useState("FL1");
-  const [placedAssets, setPlacedAssets] = useState<AssetType[]>([]);
+  const [placedAssetsByFloor, setPlacedAssetsByFloor] = useState<
+  Record<string, AssetType[]>
+  >({
+    FL1: [],
+    FL2: [],
+    FL3_1: [],
+    FL3_2: [],
+    FL4: [],
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const FRONTEND_URL = "https://ratiphong.tips.co.th:5173";
+  const [printerAssets, setPrinterAssets] = useState<Product[]>([]);
+  const [selectedPrinterCode, setSelectedPrinterCode] = useState<string | null>(
+    null
+  );
 
-  // เช็ค Authentication
+  // ดึงข้อมูล Printer จาก API
   useEffect(() => {
-    let isMounted = true;
-
-    const checkAuthentication = async () => {
+    const fetchPrinters = async () => {
       try {
-        const response = await axios.get<User>(
-          "https://ratiphong.tips.co.th:7112/api/User/Profile",
+        const response = await axios.get<ApiProduct[]>(
+          "https://ratiphong.tips.co.th:7112/api/Product/type/42",
           { withCredentials: true }
         );
 
-        if (isMounted && response.data?.name) {
-          setUser(response.data);
-        }
+        const mappedPrinters: Product[] = response.data.map((p) => ({
+          assetCode: p.assetCode || p.serial || p.prodName,
+          name: p.prodName,
+        }));
+
+        setPrinterAssets(mappedPrinters);
       } catch (err) {
-        console.error("Error fetching profile:", err);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-          setAuthChecked(true);
-        }
+        console.error("Error fetching printer assets:", err);
       }
     };
-
-    checkAuthentication();
-    return () => {
-      isMounted = false;
-    };
+    fetchPrinters();
   }, []);
-
-  // redirect ถ้าไม่ได้ login
-  useEffect(() => {
-    if (!loggingOut && authChecked && !user) {
-      window.location.href = `https://intranet.tips.co.th/ssocore/login?ReturnUrl=${encodeURIComponent(
-        FRONTEND_URL
-      )}`;
-    }
-  }, [authChecked, user, loggingOut]);
-
-  const handleLogout = () => {
-    setLoggingOut(true);
-    window.location.href = `https://intranet.tips.co.th/ssocore/logout?ReturnUrl=${encodeURIComponent(
-      FRONTEND_URL
-    )}`;
-  };
 
   const getImageSrc = () => {
     switch (selectedFloor) {
@@ -93,19 +87,47 @@ function App() {
     }
   };
 
+  const getCurrentFloorAssets = () => placedAssetsByFloor[selectedFloor] || [];
+
   const handleDragEnd = (name: string, x: number, y: number) => {
-    setPlacedAssets((prev) => {
-      const exist = prev.find((a) => a.name === name);
+    setPlacedAssetsByFloor((prev) => {
+      const currentAssets = prev[selectedFloor] || [];
+      const exist = currentAssets.find((a) => a.name === name);
+
+      let updated: AssetType[];
       if (exist) {
-        return prev.map((a) => (a.name === name ? { name, x, y } : a));
+        updated = currentAssets.map((a) =>
+          a.name === name ? { ...a, x, y } : a
+        );
       } else {
-        return [...prev, { name, x, y }];
+        updated = [...currentAssets, { name, x, y }];
       }
+
+      return { ...prev, [selectedFloor]: updated };
     });
   };
 
-  const handleAddAsset = (name: string) => {
-    setPlacedAssets((prev) => [...prev, { name, x: 50, y: 50 }]);
+  const handleAddAsset = (name: string, assetCode?: string) => {
+    const codeToAdd =
+      name === "Printer" && selectedPrinterCode
+        ? selectedPrinterCode
+        : assetCode;
+
+    setPlacedAssetsByFloor((prev) => {
+      const currentAssets = prev[selectedFloor] || [];
+      const updated = [
+        ...currentAssets,
+        { name, assetCode: codeToAdd, x: 50, y: 50 },
+      ];
+      return { ...prev, [selectedFloor]: updated };
+    });
+
+    setSelectedPrinterCode(null);
+  };
+
+  const handleSelectPrinterCode = (code: string) => {
+    setSelectedPrinterCode(code);
+    handleAddAsset("Printer", code);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -113,22 +135,20 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Navbar */}
       <Navbar
         name={user?.name || ""}
         onLogout={handleLogout}
         selectedFloor={selectedFloor}
         onFloorChange={setSelectedFloor}
       />
-      {/* <ProductList/> */}
-      {/* Main content */}
+
       <main className="flex-1 p-4 flex justify-center items-start relative">
         <Stage width={800} height={600}>
           <Layer>
             <FloorImage src={getImageSrc()} />
-            {placedAssets.map((asset) => (
+            {getCurrentFloorAssets().map((asset, index) => (
               <AssetImage
-                key={asset.name + asset.x + asset.y}
+                key={`${selectedFloor}-${asset.name}-${index}`}
                 name={asset.name}
                 x={asset.x}
                 y={asset.y}
@@ -138,15 +158,15 @@ function App() {
           </Layer>
         </Stage>
 
-        {/* Sidebar */}
         <Sidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          printerAssets={printerAssets}
           onAddAsset={handleAddAsset}
+          onSelectPrinterCode={handleSelectPrinterCode}
         />
       </main>
 
-      {/* Floating button ขวาล่าง */}
       <FloatingButton onClick={() => setSidebarOpen(true)} />
     </div>
   );
