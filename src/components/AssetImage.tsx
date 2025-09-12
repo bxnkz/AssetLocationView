@@ -1,4 +1,4 @@
-import { Image as KonvaImage } from "react-konva";
+import { Image as KonvaImage, Text, Group } from "react-konva";
 import useImage from "use-image";
 
 const assetImages: Record<string, string> = {
@@ -9,24 +9,35 @@ const assetImages: Record<string, string> = {
 };
 
 interface AssetImageProps {
+  id: string;
+  assetCode?: string;
   name: string;
   x: number;
   y: number;
-  onDragEnd: (name: string, x: number, y: number) => void;
+  onDragEnd: (id: string, x: number, y: number) => void;
 }
 
-const AssetImage = ({ name, x, y, onDragEnd }: AssetImageProps) => {
+const AssetImage = ({ id, name, x, y, onDragEnd, assetCode }: AssetImageProps) => {
   const [image] = useImage(assetImages[name]);
   return (
-    <KonvaImage
-      image={image}
+    <Group
       x={x}
       y={y}
-      width={50}
-      height={50}
       draggable
-      onDragEnd={(e) => onDragEnd(name, e.target.x(), e.target.y())}
-    />
+      onDragEnd={(e) => onDragEnd(id, e.target.x(), e.target.y())}
+    >
+      <KonvaImage image={image} width={50} height={50} />
+      {assetCode && (
+        <Text
+          text={assetCode}
+          y={55}
+          width={50}
+          align="center"
+          fontSize={9}
+          fill="black"
+        />
+      )}
+    </Group>
   );
 };
 

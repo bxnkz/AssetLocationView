@@ -9,6 +9,7 @@ import { Stage, Layer } from "react-konva";
 import { Auth } from "./hooks/Auth";
 
 interface AssetType {
+  id: string; // ใช้ assetCode หรือ serial เป็น unique id
   name: string;
   assetCode?: string;
   x: number;
@@ -33,7 +34,7 @@ function App() {
 
   const [selectedFloor, setSelectedFloor] = useState("FL1");
   const [placedAssetsByFloor, setPlacedAssetsByFloor] = useState<
-  Record<string, AssetType[]>
+    Record<string, AssetType[]>
   >({
     FL1: [],
     FL2: [],
@@ -58,7 +59,7 @@ function App() {
         );
 
         const mappedPrinters: Product[] = response.data.map((p) => ({
-          assetCode: p.assetCode || p.serial || p.prodName,
+          assetCode: p.assetCode || p.serial, // ใช้ assetCode หรือ serial
           name: p.prodName,
         }));
 
@@ -89,20 +90,12 @@ function App() {
 
   const getCurrentFloorAssets = () => placedAssetsByFloor[selectedFloor] || [];
 
-  const handleDragEnd = (name: string, x: number, y: number) => {
+  const handleDragEnd = (id: string, x: number, y: number) => {
     setPlacedAssetsByFloor((prev) => {
       const currentAssets = prev[selectedFloor] || [];
-      const exist = currentAssets.find((a) => a.name === name);
-
-      let updated: AssetType[];
-      if (exist) {
-        updated = currentAssets.map((a) =>
-          a.name === name ? { ...a, x, y } : a
-        );
-      } else {
-        updated = [...currentAssets, { name, x, y }];
-      }
-
+      const updated = currentAssets.map((a) =>
+        a.id === id ? { ...a, x, y } : a
+      );
       return { ...prev, [selectedFloor]: updated };
     });
   };
@@ -113,11 +106,19 @@ function App() {
         ? selectedPrinterCode
         : assetCode;
 
+    if (!codeToAdd) return; // ป้องกันกรณีไม่มี id
+
     setPlacedAssetsByFloor((prev) => {
       const currentAssets = prev[selectedFloor] || [];
       const updated = [
         ...currentAssets,
-        { name, assetCode: codeToAdd, x: 50, y: 50 },
+        {
+          id: codeToAdd,
+          name,
+          assetCode: codeToAdd,
+          x: 50,
+          y: 50,
+        },
       ];
       return { ...prev, [selectedFloor]: updated };
     });
@@ -146,10 +147,12 @@ function App() {
         <Stage width={800} height={600}>
           <Layer>
             <FloorImage src={getImageSrc()} />
-            {getCurrentFloorAssets().map((asset, index) => (
+            {getCurrentFloorAssets().map((asset) => (
               <AssetImage
-                key={`${selectedFloor}-${asset.name}-${index}`}
+                key={asset.id}
+                id={asset.id}
                 name={asset.name}
+                assetCode={asset.assetCode}
                 x={asset.x}
                 y={asset.y}
                 onDragEnd={handleDragEnd}
