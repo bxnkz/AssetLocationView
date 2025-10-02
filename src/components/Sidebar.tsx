@@ -8,9 +8,13 @@ interface Product {
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
-  onAddAsset: (name: string, assetCode?: string) => void; // <- แก้ตรงนี้
-  printerAssets?: Product[]; // <- optional เผื่อยังโหลดไม่เสร็จ
-  onSelectPrinterCode?: (code: string) => void; // <- optional
+  onAddAsset: (name: string, assetCode?: string) => void;
+  printerAssets?: Product[];
+  upsAssets?: Product[];
+  switchAssets?: Product[];
+  onSelectPrinterCode?: (code: string) => void;
+  onSelectUPSCode?: (code: string) => void;
+  onSelectSwitchCode?: (code: string) => void;
 }
 
 const Sidebar = ({
@@ -18,26 +22,48 @@ const Sidebar = ({
   onClose,
   onAddAsset,
   printerAssets = [],
+  upsAssets = [],
+  switchAssets = [],
   onSelectPrinterCode,
+  onSelectUPSCode,
+  onSelectSwitchCode,
 }: SidebarProps) => {
-  const [showPrinterCodes, setShowPrinterCodes] = useState(false);
+  const [showCodes, setShowCodes] = useState<"none" | "Printer" | "UPS" | "Switch">("none");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const handleAssetClick = (name: string) => {
     if (name === "Printer") {
-      // เปลี่ยนให้เปิด regardless, แต่ถ้ายังไม่มี printerAssets แสดงข้อความโหลด
-      setShowPrinterCodes(true);
+      setShowCodes("Printer");
+    } else if (name === "UPS") {
+      setShowCodes("UPS");
+    } else if (name === "Switch") {
+      setShowCodes("Switch");
     } else {
-      setShowPrinterCodes(false);
+      setShowCodes("none");
       onAddAsset(name);
       onClose();
     }
   };
 
-  const handlePrinterCodeClick = (code: string) => {
-    onSelectPrinterCode?.(code);
-    setShowPrinterCodes(false);
+  const handleCodeClick = (code: string, type: "Printer" | "UPS" | "Switch") => {
+    if (type === "Printer") onSelectPrinterCode?.(code);
+    if (type === "UPS") onSelectUPSCode?.(code);
+    if (type === "Switch") onSelectSwitchCode?.(code); 
+    setShowCodes("none");
     onClose();
   };
+
+  const getCodeList = () => {
+    if (showCodes === "Printer") return printerAssets;
+    if (showCodes === "UPS") return upsAssets;
+    if (showCodes === "Switch") return switchAssets;
+    return [];
+  };
+
+  const filteredAssets = getCodeList().filter(
+    (p) => p.assetCode.toLowerCase().includes(searchTerm.toLowerCase())
+    || p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div
@@ -53,7 +79,7 @@ const Sidebar = ({
       </div>
 
       <div className="p-4 space-y-2 overflow-y-auto h-full">
-        {!showPrinterCodes ? (
+        {showCodes === "none" ? (
           ["Table", "Printer", "UPS", "Switch"].map((item) => (
             <div
               key={item}
@@ -65,25 +91,31 @@ const Sidebar = ({
           ))
         ) : (
           <>
-            <button
-              onClick={() => setShowPrinterCodes(false)}
+           <button
+              onClick={() => {
+                setShowCodes("none");
+                setSearchTerm(""); // reset search
+              }}
               className="mb-4 text-blue-600 hover:underline"
             >
               &larr; Back to Assets
             </button>
 
-            {printerAssets.length > 0 ? (
-              printerAssets.map((printer) => (
+            <input type="text" value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} 
+            placeholder="Search assets ..." className="w-full p-2 border rounded mb-3"
+            />
+            {filteredAssets.length > 0 ? (
+              filteredAssets.map((p) => (
                 <div
-                  key={printer.assetCode || printer.name}
+                  key={p.assetCode}
                   className="p-2 bg-gray-200 rounded cursor-pointer"
-                  onClick={() => handlePrinterCodeClick(printer.assetCode)}
+                  onClick={() => handleCodeClick(p.assetCode, showCodes)}
                 >
-                  {printer.assetCode || "N/A"} - {printer.name}
+                  {p.assetCode} - {p.name}
                 </div>
               ))
             ) : (
-              <div>Loading printer data...</div>
+              <div>Loading data...</div>
             )}
           </>
         )}

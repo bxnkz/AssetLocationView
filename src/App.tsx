@@ -9,7 +9,8 @@ import { Stage, Layer } from "react-konva";
 import { Auth } from "./hooks/Auth";
 
 interface AssetType {
-  id: string; // ใช้ assetCode หรือ serial เป็น unique id
+  id: string;
+  type: "Table" | "Printer" | "UPS" | "Switch";
   name: string;
   assetCode?: string;
   x: number;
@@ -45,12 +46,35 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [printerAssets, setPrinterAssets] = useState<Product[]>([]);
-  const [selectedPrinterCode, setSelectedPrinterCode] = useState<string | null>(
-    null
-  );
+  const [selectedPrinterCode, setSelectedPrinterCode] = useState<string | null>(null);
 
-  // ดึงข้อมูล Printer จาก API
+  const [upsAssets, setUPSAssets] = useState<Product[]>([]);
+  const [selectedUPSCode, setSelectedUPSCode] = useState<string | null>(null);
+
+  const [switchAssets, setSwitchAsset] = useState<Product[]>([]);
+  const [selectedSwitchCode, setSelectedSwitchCode] = useState<string | null>(null);
+
   useEffect(() => {
+    // Fetch UPS Data
+    const fetchUPS = async () => {
+      try {
+        const response = await axios.get<ApiProduct[]>(
+          "https://ratiphong.tips.co.th:7112/api/Product/type/2",
+          { withCredentials: true }
+        );
+
+        const mappedUPS: Product[] = response.data.map((p) => ({
+          assetCode: p.assetCode || p.serial,
+          name: p.prodName,
+        }));
+
+        setUPSAssets(mappedUPS);
+      } catch (err) {
+        console.error("Error fetching UPS assets:", err);
+      }
+    };
+
+    // Fetch Printer Data
     const fetchPrinters = async () => {
       try {
         const response = await axios.get<ApiProduct[]>(
@@ -59,7 +83,7 @@ function App() {
         );
 
         const mappedPrinters: Product[] = response.data.map((p) => ({
-          assetCode: p.assetCode || p.serial, // ใช้ assetCode หรือ serial
+          assetCode: p.assetCode || p.serial,
           name: p.prodName,
         }));
 
@@ -68,7 +92,59 @@ function App() {
         console.error("Error fetching printer assets:", err);
       }
     };
+
+    // Fetch Switch Data
+    const fetchSwitch = async () => {
+      try {
+        const response = await axios.get<ApiProduct[]>(
+          "https://ratiphong.tips.co.th:7112/api/Product/type/12",
+          { withCredentials: true }
+        );
+
+        const mappedSwitch: Product[] = response.data.map((p) => ({
+          assetCode: p.assetCode || p.serial,
+          name: p.prodName,
+        }));
+        setSwitchAsset(mappedSwitch);
+      } catch (err) {
+        console.error("Error fetching switch assets:", err);
+      }
+    };
+
+    // Fetch Asset Positions
+    const fetchAssets = async () => {
+      try {
+        const floors = ["FL1", "FL2", "FL3_1", "FL3_2", "FL4"];
+        const result: Record<string, AssetType[]> = {};
+
+        for (const floor of floors) {
+          const response = await axios.get<
+            { assetCode: string; posX: number; posY: number; typeName: string }[]
+          >(
+            `https://ratiphong.tips.co.th:7112/api/AssetPosition/${floor}`,
+            { withCredentials: true }
+          );
+
+          result[floor] = response.data.map((a) => ({
+            id: a.assetCode,
+            type: a.typeName as AssetType["type"],
+            name: a.typeName,
+            assetCode: a.assetCode,
+            x: a.posX,
+            y: a.posY,
+          }));
+        }
+
+        setPlacedAssetsByFloor(result);
+      } catch (err) {
+        console.error("Error fetching saved assets:", err);
+      }
+    };
+
+    fetchAssets();
     fetchPrinters();
+    fetchUPS();
+    fetchSwitch();
   }, []);
 
   const getImageSrc = () => {
@@ -96,39 +172,120 @@ function App() {
       const updated = currentAssets.map((a) =>
         a.id === id ? { ...a, x, y } : a
       );
+
+      const movedAsset = updated.find((a) => a.id === id);
+      if (movedAsset) saveAssetPosition(movedAsset);
+
       return { ...prev, [selectedFloor]: updated };
     });
+  };
+
+  // Delete Asset
+  const handleDeleteAsset = async (asset: AssetType) => {
+    const confirmed = window.confirm("Are you sure delete asset ?");
+    if (!confirmed) return;
+    try {
+      await axios.post(
+        "https://ratiphong.tips.co.th:7112/api/AssetPosition/DeleteAsset",
+        { AssetCode: asset.assetCode, Floor: selectedFloor },
+        { withCredentials: true }
+      );
+
+      setPlacedAssetsByFloor((prev) => {
+        const currentAssets = prev[selectedFloor] || [];
+        const updated = currentAssets.filter((a) => a.id !== asset.id);
+        return { ...prev, [selectedFloor]: updated };
+      });
+
+      console.log("Deleted asset:", asset.assetCode);
+    } catch (err: any) {
+      if (err.response) {
+        console.error("Fail to delete asset. Server responded with:", err.response.data);
+      } else if (err.request) {
+        console.error("Fail to delete asset. No response received:", err.request);
+      } else {
+        console.error("Fail to delete asset. Error:", err.message);
+      }
+    }
   };
 
   const handleAddAsset = (name: string, assetCode?: string) => {
     const codeToAdd =
       name === "Printer" && selectedPrinterCode
         ? selectedPrinterCode
+        : name === "UPS" && selectedUPSCode
+        ? selectedUPSCode
+        : name === "Switch" && selectedSwitchCode
+        ? selectedSwitchCode
         : assetCode;
 
-    if (!codeToAdd) return; // ป้องกันกรณีไม่มี id
+    if (!codeToAdd) return;
+
+    const type =
+      name === "Printer"
+        ? "Printer"
+        : name === "UPS"
+        ? "UPS"
+        : name === "Switch"
+        ? "Switch"
+        : "Table";
+
+    const newAsset: AssetType = {
+      id: codeToAdd,
+      type,
+      name,
+      assetCode: codeToAdd,
+      x: 50,
+      y: 50,
+    };
 
     setPlacedAssetsByFloor((prev) => {
       const currentAssets = prev[selectedFloor] || [];
-      const updated = [
-        ...currentAssets,
-        {
-          id: codeToAdd,
-          name,
-          assetCode: codeToAdd,
-          x: 50,
-          y: 50,
-        },
-      ];
-      return { ...prev, [selectedFloor]: updated };
+      return {
+        ...prev,
+        [selectedFloor]: [...currentAssets, newAsset],
+      };
     });
 
-    setSelectedPrinterCode(null);
+    // Save to Database
+    saveAssetPosition(newAsset);
+
+    if (name === "Printer") setSelectedPrinterCode(null);
+    if (name === "UPS") setSelectedUPSCode(null);
+    if (name === "Switch") setSelectedSwitchCode(null);
   };
 
   const handleSelectPrinterCode = (code: string) => {
     setSelectedPrinterCode(code);
     handleAddAsset("Printer", code);
+  };
+
+  const handleSelectUPSCode = (code: string) => {
+    setSelectedUPSCode(code);
+    handleAddAsset("UPS", code);
+  };
+
+  const handleSelectSwitchCode = (code: string) => {
+    setSelectedSwitchCode(code);
+    handleAddAsset("Switch", code);
+  };
+
+  const saveAssetPosition = async (asset: AssetType) => {
+    try {
+      await axios.post(
+        "https://ratiphong.tips.co.th:7112/api/AssetPosition",
+        {
+          AssetCode: asset.assetCode,
+          Floor: selectedFloor,
+          PosX: asset.x,
+          PosY: asset.y,
+        },
+        { withCredentials: true }
+      );
+      console.log("Saved asset:", asset);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   if (loading) return <div>Loading...</div>;
@@ -151,11 +308,13 @@ function App() {
               <AssetImage
                 key={asset.id}
                 id={asset.id}
+                type={asset.type}
                 name={asset.name}
                 assetCode={asset.assetCode}
                 x={asset.x}
                 y={asset.y}
                 onDragEnd={handleDragEnd}
+                onDelete={() => handleDeleteAsset(asset)}
               />
             ))}
           </Layer>
@@ -165,8 +324,12 @@ function App() {
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           printerAssets={printerAssets}
+          upsAssets={upsAssets}
+          switchAssets={switchAssets}  
           onAddAsset={handleAddAsset}
           onSelectPrinterCode={handleSelectPrinterCode}
+          onSelectUPSCode={handleSelectUPSCode}
+          onSelectSwitchCode={handleSelectSwitchCode} 
         />
       </main>
 
