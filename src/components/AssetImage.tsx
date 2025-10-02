@@ -1,4 +1,4 @@
-import { Image as KonvaImage } from "react-konva";
+import { Image as KonvaImage, Text, Group, Rect } from "react-konva";
 import useImage from "use-image";
 
 const assetImages: Record<string, string> = {
@@ -9,24 +9,70 @@ const assetImages: Record<string, string> = {
 };
 
 interface AssetImageProps {
+  id: string;
+  type: "Table" | "Printer" | "UPS" | "Switch";
+  assetCode?: string;
   name: string;
   x: number;
   y: number;
-  onDragEnd: (name: string, x: number, y: number) => void;
+  width?: number; // ขนาดปรับได้
+  height?: number;
+  onDragEnd: (id: string, x: number, y: number) => void;
+  onDelete?: () => void; // callback สำหรับลบ asset
 }
 
-const AssetImage = ({ name, x, y, onDragEnd }: AssetImageProps) => {
-  const [image] = useImage(assetImages[name]);
+const AssetImage = ({
+  id,
+  type,
+  x,
+  y,
+  width = 45,
+  height = 45,
+  onDragEnd,
+  assetCode,
+  name,
+  onDelete,
+}: AssetImageProps) => {
+  const [image] = useImage(assetImages[type] || assetImages["Table"]); // default Table
+
   return (
-    <KonvaImage
-      image={image}
+    <Group
       x={x}
       y={y}
-      width={50}
-      height={50}
       draggable
-      onDragEnd={(e) => onDragEnd(name, e.target.x(), e.target.y())}
-    />
+      onDragEnd={(e) => onDragEnd(id, e.target.x(), e.target.y())}
+    >
+      {/* รูป asset */}
+      <KonvaImage image={image} width={width} height={height} />
+
+      {/* ปุ่มลบ */}
+      <Group
+        x={width - 12} // มุมขวาบน
+        y={-8}
+        onClick={() => onDelete?.()}
+      >
+        <Rect width={16} height={16} fill="red" cornerRadius={4} shadowBlur={2} />
+        <Text
+          text="X"
+          fontSize={12}
+          fill="white"
+          align="center"
+          verticalAlign="middle"
+          width={16}
+          height={16}
+        />
+      </Group>
+
+      {/* ข้อความชื่อ/assetCode */}
+      <Text
+        text={assetCode || name}
+        y={height + 5}
+        // width={width}
+        align="center"
+        fontSize={9}
+        fill="black"
+      />
+    </Group>
   );
 };
 

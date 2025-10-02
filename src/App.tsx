@@ -5,76 +5,147 @@ import FloorImage from "./components/FloorImage";
 import AssetImage from "./components/AssetImage";
 import Sidebar from "./components/Sidebar";
 import FloatingButton from "./components/FloatingButton";
-// import ProductList from "./components";
 import { Stage, Layer } from "react-konva";
-
-interface User {
-  name: string;
-}
+import { Auth } from "./hooks/Auth";
 
 interface AssetType {
+  id: string;
+  type: "Table" | "Printer" | "UPS" | "Switch";
   name: string;
+  assetCode?: string;
   x: number;
   y: number;
 }
 
+interface Product {
+  assetCode: string;
+  name: string;
+}
+
+interface ApiProduct {
+  assetCode: string;
+  prodName: string;
+  prodDesc: string;
+  ip: string;
+  serial: string;
+}
+
 function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
+  const { user, loading, loggingOut, handleLogout } = Auth();
 
   const [selectedFloor, setSelectedFloor] = useState("FL1");
-  const [placedAssets, setPlacedAssets] = useState<AssetType[]>([]);
+  const [placedAssetsByFloor, setPlacedAssetsByFloor] = useState<
+    Record<string, AssetType[]>
+  >({
+    FL1: [],
+    FL2: [],
+    FL3_1: [],
+    FL3_2: [],
+    FL4: [],
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const FRONTEND_URL = "https://ratiphong.tips.co.th:5173";
+  const [printerAssets, setPrinterAssets] = useState<Product[]>([]);
+  const [selectedPrinterCode, setSelectedPrinterCode] = useState<string | null>(null);
 
-  // เช็ค Authentication
+  const [upsAssets, setUPSAssets] = useState<Product[]>([]);
+  const [selectedUPSCode, setSelectedUPSCode] = useState<string | null>(null);
+
+  const [switchAssets, setSwitchAsset] = useState<Product[]>([]);
+  const [selectedSwitchCode, setSelectedSwitchCode] = useState<string | null>(null);
+
   useEffect(() => {
-    let isMounted = true;
-
-    const checkAuthentication = async () => {
+    // Fetch UPS Data
+    const fetchUPS = async () => {
       try {
-        const response = await axios.get<User>(
-          "https://ratiphong.tips.co.th:7112/api/User/Profile",
+        const response = await axios.get<ApiProduct[]>(
+          "https://ratiphong.tips.co.th:7112/api/Product/type/2",
           { withCredentials: true }
         );
 
-        if (isMounted && response.data?.name) {
-          setUser(response.data);
-        }
+        const mappedUPS: Product[] = response.data.map((p) => ({
+          assetCode: p.assetCode || p.serial,
+          name: p.prodName,
+        }));
+
+        setUPSAssets(mappedUPS);
       } catch (err) {
-        console.error("Error fetching profile:", err);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-          setAuthChecked(true);
-        }
+        console.error("Error fetching UPS assets:", err);
       }
     };
 
-    checkAuthentication();
-    return () => {
-      isMounted = false;
+    // Fetch Printer Data
+    const fetchPrinters = async () => {
+      try {
+        const response = await axios.get<ApiProduct[]>(
+          "https://ratiphong.tips.co.th:7112/api/Product/type/42",
+          { withCredentials: true }
+        );
+
+        const mappedPrinters: Product[] = response.data.map((p) => ({
+          assetCode: p.assetCode || p.serial,
+          name: p.prodName,
+        }));
+
+        setPrinterAssets(mappedPrinters);
+      } catch (err) {
+        console.error("Error fetching printer assets:", err);
+      }
     };
+
+    // Fetch Switch Data
+    const fetchSwitch = async () => {
+      try {
+        const response = await axios.get<ApiProduct[]>(
+          "https://ratiphong.tips.co.th:7112/api/Product/type/12",
+          { withCredentials: true }
+        );
+
+        const mappedSwitch: Product[] = response.data.map((p) => ({
+          assetCode: p.assetCode || p.serial,
+          name: p.prodName,
+        }));
+        setSwitchAsset(mappedSwitch);
+      } catch (err) {
+        console.error("Error fetching switch assets:", err);
+      }
+    };
+
+    // Fetch Asset Positions
+    const fetchAssets = async () => {
+      try {
+        const floors = ["FL1", "FL2", "FL3_1", "FL3_2", "FL4"];
+        const result: Record<string, AssetType[]> = {};
+
+        for (const floor of floors) {
+          const response = await axios.get<
+            { assetCode: string; posX: number; posY: number; typeName: string }[]
+          >(
+            `https://ratiphong.tips.co.th:7112/api/AssetPosition/${floor}`,
+            { withCredentials: true }
+          );
+
+          result[floor] = response.data.map((a) => ({
+            id: a.assetCode,
+            type: a.typeName as AssetType["type"],
+            name: a.typeName,
+            assetCode: a.assetCode,
+            x: a.posX,
+            y: a.posY,
+          }));
+        }
+
+        setPlacedAssetsByFloor(result);
+      } catch (err) {
+        console.error("Error fetching saved assets:", err);
+      }
+    };
+
+    fetchAssets();
+    fetchPrinters();
+    fetchUPS();
+    fetchSwitch();
   }, []);
-
-  // redirect ถ้าไม่ได้ login
-  useEffect(() => {
-    if (!loggingOut && authChecked && !user) {
-      window.location.href = `https://intranet.tips.co.th/ssocore/login?ReturnUrl=${encodeURIComponent(
-        FRONTEND_URL
-      )}`;
-    }
-  }, [authChecked, user, loggingOut]);
-
-  const handleLogout = () => {
-    setLoggingOut(true);
-    window.location.href = `https://intranet.tips.co.th/ssocore/logout?ReturnUrl=${encodeURIComponent(
-      FRONTEND_URL
-    )}`;
-  };
 
   const getImageSrc = () => {
     switch (selectedFloor) {
@@ -93,19 +164,128 @@ function App() {
     }
   };
 
-  const handleDragEnd = (name: string, x: number, y: number) => {
-    setPlacedAssets((prev) => {
-      const exist = prev.find((a) => a.name === name);
-      if (exist) {
-        return prev.map((a) => (a.name === name ? { name, x, y } : a));
-      } else {
-        return [...prev, { name, x, y }];
-      }
+  const getCurrentFloorAssets = () => placedAssetsByFloor[selectedFloor] || [];
+
+  const handleDragEnd = (id: string, x: number, y: number) => {
+    setPlacedAssetsByFloor((prev) => {
+      const currentAssets = prev[selectedFloor] || [];
+      const updated = currentAssets.map((a) =>
+        a.id === id ? { ...a, x, y } : a
+      );
+
+      const movedAsset = updated.find((a) => a.id === id);
+      if (movedAsset) saveAssetPosition(movedAsset);
+
+      return { ...prev, [selectedFloor]: updated };
     });
   };
 
-  const handleAddAsset = (name: string) => {
-    setPlacedAssets((prev) => [...prev, { name, x: 50, y: 50 }]);
+  // Delete Asset
+  const handleDeleteAsset = async (asset: AssetType) => {
+    const confirmed = window.confirm("Are you sure delete asset ?");
+    if (!confirmed) return;
+    try {
+      await axios.post(
+        "https://ratiphong.tips.co.th:7112/api/AssetPosition/DeleteAsset",
+        { AssetCode: asset.assetCode, Floor: selectedFloor },
+        { withCredentials: true }
+      );
+
+      setPlacedAssetsByFloor((prev) => {
+        const currentAssets = prev[selectedFloor] || [];
+        const updated = currentAssets.filter((a) => a.id !== asset.id);
+        return { ...prev, [selectedFloor]: updated };
+      });
+
+      console.log("Deleted asset:", asset.assetCode);
+    } catch (err: any) {
+      if (err.response) {
+        console.error("Fail to delete asset. Server responded with:", err.response.data);
+      } else if (err.request) {
+        console.error("Fail to delete asset. No response received:", err.request);
+      } else {
+        console.error("Fail to delete asset. Error:", err.message);
+      }
+    }
+  };
+
+  const handleAddAsset = (name: string, assetCode?: string) => {
+    const codeToAdd =
+      name === "Printer" && selectedPrinterCode
+        ? selectedPrinterCode
+        : name === "UPS" && selectedUPSCode
+        ? selectedUPSCode
+        : name === "Switch" && selectedSwitchCode
+        ? selectedSwitchCode
+        : assetCode;
+
+    if (!codeToAdd) return;
+
+    const type =
+      name === "Printer"
+        ? "Printer"
+        : name === "UPS"
+        ? "UPS"
+        : name === "Switch"
+        ? "Switch"
+        : "Table";
+
+    const newAsset: AssetType = {
+      id: codeToAdd,
+      type,
+      name,
+      assetCode: codeToAdd,
+      x: 50,
+      y: 50,
+    };
+
+    setPlacedAssetsByFloor((prev) => {
+      const currentAssets = prev[selectedFloor] || [];
+      return {
+        ...prev,
+        [selectedFloor]: [...currentAssets, newAsset],
+      };
+    });
+
+    // Save to Database
+    saveAssetPosition(newAsset);
+
+    if (name === "Printer") setSelectedPrinterCode(null);
+    if (name === "UPS") setSelectedUPSCode(null);
+    if (name === "Switch") setSelectedSwitchCode(null);
+  };
+
+  const handleSelectPrinterCode = (code: string) => {
+    setSelectedPrinterCode(code);
+    handleAddAsset("Printer", code);
+  };
+
+  const handleSelectUPSCode = (code: string) => {
+    setSelectedUPSCode(code);
+    handleAddAsset("UPS", code);
+  };
+
+  const handleSelectSwitchCode = (code: string) => {
+    setSelectedSwitchCode(code);
+    handleAddAsset("Switch", code);
+  };
+
+  const saveAssetPosition = async (asset: AssetType) => {
+    try {
+      await axios.post(
+        "https://ratiphong.tips.co.th:7112/api/AssetPosition",
+        {
+          AssetCode: asset.assetCode,
+          Floor: selectedFloor,
+          PosX: asset.x,
+          PosY: asset.y,
+        },
+        { withCredentials: true }
+      );
+      console.log("Saved asset:", asset);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   if (loading) return <div>Loading...</div>;
@@ -113,40 +293,46 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Navbar */}
       <Navbar
         name={user?.name || ""}
         onLogout={handleLogout}
         selectedFloor={selectedFloor}
         onFloorChange={setSelectedFloor}
       />
-      {/* <ProductList/> */}
-      {/* Main content */}
+
       <main className="flex-1 p-4 flex justify-center items-start relative">
         <Stage width={800} height={600}>
           <Layer>
             <FloorImage src={getImageSrc()} />
-            {placedAssets.map((asset) => (
+            {getCurrentFloorAssets().map((asset) => (
               <AssetImage
-                key={asset.name + asset.x + asset.y}
+                key={asset.id}
+                id={asset.id}
+                type={asset.type}
                 name={asset.name}
+                assetCode={asset.assetCode}
                 x={asset.x}
                 y={asset.y}
                 onDragEnd={handleDragEnd}
+                onDelete={() => handleDeleteAsset(asset)}
               />
             ))}
           </Layer>
         </Stage>
 
-        {/* Sidebar */}
         <Sidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          printerAssets={printerAssets}
+          upsAssets={upsAssets}
+          switchAssets={switchAssets}  
           onAddAsset={handleAddAsset}
+          onSelectPrinterCode={handleSelectPrinterCode}
+          onSelectUPSCode={handleSelectUPSCode}
+          onSelectSwitchCode={handleSelectSwitchCode} 
         />
       </main>
 
-      {/* Floating button ขวาล่าง */}
       <FloatingButton onClick={() => setSidebarOpen(true)} />
     </div>
   );
