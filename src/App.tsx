@@ -279,8 +279,11 @@ function App() {
           Floor: selectedFloor,
           PosX: asset.x,
           PosY: asset.y,
+          UpdatedBy: user?.name || "Unknow"
         },
-        { withCredentials: true }
+        { withCredentials: true,
+          headers: { "Content-Type": "application/json" }
+         }
       );
       console.log("Saved asset:", asset);
     } catch (err) {

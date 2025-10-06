@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 
 interface User {
   name: string;
@@ -7,16 +8,57 @@ interface User {
 const FRONTEND_URL = "https://ratiphong.tips.co.th:5173";
 
 export function Auth() {
-  // Mock user สำหรับ dev / testing
-  const [user, setUser] = useState<User | null>({ name: "Mock User" });
-  const [loading, setLoading] = useState(false);  // ไม่ต้อง loading
-  const [authChecked, setAuthChecked] = useState(true);  // bypass check
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // handleLogout สำหรับ mock
+  // ตรวจสอบการล็อกอิน
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkAuthentication = async () => {
+      try {
+        const response = await axios.get<User>(
+          "https://ratiphong.tips.co.th:7112/api/User/Profile",
+          { withCredentials: true }
+        );
+
+        if (isMounted && response.data?.name) {
+          setUser(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          setAuthChecked(true);
+        }
+      }
+    };
+
+    checkAuthentication();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // ถ้าไม่ล็อกอิน ให้ redirect ไป SSO
+  useEffect(() => {
+    if (!loggingOut && authChecked && !user) {
+      window.location.href = `https://intranet.tips.co.th/ssocore/login?ReturnUrl=${encodeURIComponent(
+        FRONTEND_URL
+      )}`;
+    }
+  }, [authChecked, user, loggingOut]);
+
+  // Logout function
   const handleLogout = () => {
     setLoggingOut(true);
-    console.log("Logout clicked (mock)");
+    window.location.href = `https://intranet.tips.co.th/ssocore/logout?ReturnUrl=${encodeURIComponent(
+      FRONTEND_URL
+    )}`;
   };
 
   return { user, loading, loggingOut, handleLogout };
