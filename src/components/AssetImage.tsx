@@ -6,11 +6,12 @@ const assetImages: Record<string, string> = {
   Printer: "/assets/printer.png",
   UPS: "/assets/ups.png",
   Switch: "/assets/hub.png",
+  Computer: "/assets/computer.png",
 };
 
 interface AssetImageProps {
   id: string;
-  type: "Table" | "Printer" | "UPS" | "Switch";
+  type: "Table" | "Printer" | "UPS" | "Switch" | "Computer";
   assetCode?: string;
   name: string;
   x: number;
@@ -26,8 +27,8 @@ const AssetImage = ({
   type,
   x,
   y,
-  width = 45,
-  height = 45,
+  width = 35,
+  height = 35,
   onDragEnd,
   assetCode,
   name,
@@ -54,7 +55,7 @@ const AssetImage = ({
         <Rect width={16} height={16} fill="red" cornerRadius={4} shadowBlur={2} />
         <Text
           text="X"
-          fontSize={12}
+          fontSize={8}
           fill="white"
           align="center"
           verticalAlign="middle"
@@ -66,10 +67,11 @@ const AssetImage = ({
       {/* ข้อความชื่อ/assetCode */}
       <Text
         text={assetCode || name}
-        y={height + 5}
-        // width={width}
+        y={height + 3}
+        width={50}
+        x={width/2 - 25}
         align="center"
-        fontSize={9}
+        fontSize={7}
         fill="black"
       />
     </Group>

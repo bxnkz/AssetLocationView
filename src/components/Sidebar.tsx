@@ -12,9 +12,11 @@ interface SidebarProps {
   printerAssets?: Product[];
   upsAssets?: Product[];
   switchAssets?: Product[];
+  computerAssets?: Product[];
   onSelectPrinterCode?: (code: string) => void;
   onSelectUPSCode?: (code: string) => void;
   onSelectSwitchCode?: (code: string) => void;
+  onSelectComputerCode?: (code: string) => void;
 }
 
 const Sidebar = ({
@@ -24,11 +26,13 @@ const Sidebar = ({
   printerAssets = [],
   upsAssets = [],
   switchAssets = [],
+  computerAssets = [],
   onSelectPrinterCode,
   onSelectUPSCode,
   onSelectSwitchCode,
+  onSelectComputerCode,
 }: SidebarProps) => {
-  const [showCodes, setShowCodes] = useState<"none" | "Printer" | "UPS" | "Switch">("none");
+  const [showCodes, setShowCodes] = useState<"none" | "Printer" | "UPS" | "Switch" | "Computer">("none");
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleAssetClick = (name: string) => {
@@ -38,17 +42,21 @@ const Sidebar = ({
       setShowCodes("UPS");
     } else if (name === "Switch") {
       setShowCodes("Switch");
-    } else {
+    } else if (name === "Computer"){
+      setShowCodes("Computer");
+    }
+    else {
       setShowCodes("none");
       onAddAsset(name);
       onClose();
     }
   };
 
-  const handleCodeClick = (code: string, type: "Printer" | "UPS" | "Switch") => {
+  const handleCodeClick = (code: string, type: "Printer" | "UPS" | "Switch" | "Computer") => {
     if (type === "Printer") onSelectPrinterCode?.(code);
     if (type === "UPS") onSelectUPSCode?.(code);
     if (type === "Switch") onSelectSwitchCode?.(code); 
+    if (type === "Computer") onSelectComputerCode?.(code);
     setShowCodes("none");
     onClose();
   };
@@ -57,6 +65,7 @@ const Sidebar = ({
     if (showCodes === "Printer") return printerAssets;
     if (showCodes === "UPS") return upsAssets;
     if (showCodes === "Switch") return switchAssets;
+    if (showCodes === "Computer") return computerAssets;
     return [];
   };
 
@@ -80,7 +89,7 @@ const Sidebar = ({
 
       <div className="p-4 space-y-2 overflow-y-auto h-full">
         {showCodes === "none" ? (
-          ["Table", "Printer", "UPS", "Switch"].map((item) => (
+          ["Computer", "Printer", "UPS", "Switch"].map((item) => (
             <div
               key={item}
               className="p-2 bg-gray-200 rounded cursor-pointer"
