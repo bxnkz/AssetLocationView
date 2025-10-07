@@ -4,11 +4,18 @@ import '../index.css';
 interface NavBarProps {
   name: string;
   onLogout: () => void;
+
   selectedFloor: string;
   onFloorChange: (floor:string) => void;
+
+  selectedSite: string;
+  onSiteChange: (site: string) => void;
+
+  selectedDepartment: string;
+  onDepartmentChange: (dept: string) => void;
 }
 
-const Navbar: React.FC<NavBarProps> = ({ name, onLogout,selectedFloor,onFloorChange }) => {
+const Navbar: React.FC<NavBarProps> = ({ name, onLogout,selectedFloor,onFloorChange,selectedSite,onSiteChange,selectedDepartment,onDepartmentChange, }) => {
   return (
     <nav className="flex justify-between items-center bg-blue-900 text-white px-5 py-2 shadow-md">
       <img
@@ -19,8 +26,8 @@ const Navbar: React.FC<NavBarProps> = ({ name, onLogout,selectedFloor,onFloorCha
       <ul className="flex gap-5 m-0 p-0 list-none">
         <label htmlFor="">
           Select Site : 
-          <select name="" id="" className="ml-2 rounded-md  bg-gray-400 border-black text-black">
-            <option value="Fl1">B4</option>
+          <select name="" id="" value={selectedSite} onChange={(e) => onSiteChange(e.target.value)} className="ml-2 rounded-md  bg-gray-400 border-black text-black">
+            <option value="B4">B4</option>
             {/* <option value="Fl2">CD</option> */}
           </select>
         </label>
@@ -38,9 +45,9 @@ const Navbar: React.FC<NavBarProps> = ({ name, onLogout,selectedFloor,onFloorCha
 
          <label htmlFor="">
           Select Department : 
-          <select name="" id="" className="ml-2 rounded-md  bg-gray-400 border-black text-black">
-            <option value="Fl1">IT</option>
-            <option value="Fl2">HR</option>
+          <select name="" id="" value={selectedDepartment} onChange={(e) => onDepartmentChange(e.target.value)} className="ml-2 rounded-md  bg-gray-400 border-black text-black">
+            <option value="IT">IT</option>
+            <option value="HR">HR</option>
           </select>
         </label>
       </ul>

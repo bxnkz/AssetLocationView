@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 interface Product {
   assetCode: string;
@@ -12,9 +12,6 @@ interface SidebarProps {
   printerAssets?: Product[];
   upsAssets?: Product[];
   switchAssets?: Product[];
-  onSelectPrinterCode?: (code: string) => void;
-  onSelectUPSCode?: (code: string) => void;
-  onSelectSwitchCode?: (code: string) => void;
 }
 
 const Sidebar = ({
@@ -24,20 +21,13 @@ const Sidebar = ({
   printerAssets = [],
   upsAssets = [],
   switchAssets = [],
-  onSelectPrinterCode,
-  onSelectUPSCode,
-  onSelectSwitchCode,
 }: SidebarProps) => {
   const [showCodes, setShowCodes] = useState<"none" | "Printer" | "UPS" | "Switch">("none");
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleAssetClick = (name: string) => {
-    if (name === "Printer") {
-      setShowCodes("Printer");
-    } else if (name === "UPS") {
-      setShowCodes("UPS");
-    } else if (name === "Switch") {
-      setShowCodes("Switch");
+    if (["Printer", "UPS", "Switch"].includes(name)) {
+      setShowCodes(name as "Printer" | "UPS" | "Switch");
     } else {
       setShowCodes("none");
       onAddAsset(name);
@@ -45,12 +35,12 @@ const Sidebar = ({
     }
   };
 
-  const handleCodeClick = (code: string, type: "Printer" | "UPS" | "Switch") => {
-    if (type === "Printer") onSelectPrinterCode?.(code);
-    if (type === "UPS") onSelectUPSCode?.(code);
-    if (type === "Switch") onSelectSwitchCode?.(code); 
-    setShowCodes("none");
-    onClose();
+  const handleCodeClick = (code: string) => {
+    if (showCodes !== "none") {
+      onAddAsset(showCodes, code);
+      setShowCodes("none");
+      onClose();
+    }
   };
 
   const getCodeList = () => {
@@ -61,9 +51,10 @@ const Sidebar = ({
   };
 
   const filteredAssets = getCodeList().filter(
-    (p) => p.assetCode.toLowerCase().includes(searchTerm.toLowerCase())
-    || p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+    (p) =>
+      p.assetCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div
@@ -91,7 +82,7 @@ const Sidebar = ({
           ))
         ) : (
           <>
-           <button
+            <button
               onClick={() => {
                 setShowCodes("none");
                 setSearchTerm(""); // reset search
@@ -101,15 +92,19 @@ const Sidebar = ({
               &larr; Back to Assets
             </button>
 
-            <input type="text" value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} 
-            placeholder="Search assets ..." className="w-full p-2 border rounded mb-3"
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search assets ..."
+              className="w-full p-2 border rounded mb-3"
             />
             {filteredAssets.length > 0 ? (
               filteredAssets.map((p) => (
                 <div
                   key={p.assetCode}
                   className="p-2 bg-gray-200 rounded cursor-pointer"
-                  onClick={() => handleCodeClick(p.assetCode, showCodes)}
+                  onClick={() => handleCodeClick(p.assetCode)}
                 >
                   {p.assetCode} - {p.name}
                 </div>
