@@ -2,24 +2,26 @@ import { Image as KonvaImage, Text, Group, Rect } from "react-konva";
 import useImage from "use-image";
 
 const assetImages: Record<string, string> = {
-  Table: "/assets/table.png",
+  // Table: "/assets/table.png",
   Printer: "/assets/printer.png",
   UPS: "/assets/ups.png",
   Switch: "/assets/hub.png",
   Computer: "/assets/computer.png",
+  Notebook: "/assets/laptop.png",
+  Phone: "/assets/phone.png",
 };
 
 interface AssetImageProps {
   id: string;
-  type: "Table" | "Printer" | "UPS" | "Switch" | "Computer";
+  type?:  "Printer" | "UPS" | "Switch" | "Computer" | "Notebook" | "Phone";
   assetCode?: string;
   name: string;
   x: number;
   y: number;
-  width?: number; // ขนาดปรับได้
+  width?: number; 
   height?: number;
   onDragEnd: (id: string, x: number, y: number) => void;
-  onDelete?: () => void; // callback สำหรับลบ asset
+  onDelete?: () => void;
 }
 
 const AssetImage = ({
@@ -34,7 +36,7 @@ const AssetImage = ({
   name,
   onDelete,
 }: AssetImageProps) => {
-  const [image] = useImage(assetImages[type] || assetImages["Table"]); // default Table
+  const [image] = useImage(assetImages[type!] || assetImages["Table"]);
 
   return (
     <Group

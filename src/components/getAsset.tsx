@@ -3,7 +3,7 @@ import axios from "axios";
 
 export interface AssetType {
   id: string;
-  type: "Computer" | "Printer" | "UPS" | "Switch" | "Table";
+  type?: "Computer" | "Printer" | "UPS" | "Switch" | "Notebook" | "Phone";
   name: string;
   assetCode?: string;
   x: number;
@@ -28,6 +28,8 @@ interface FetchAssetProps {
   setUPSAssets: (data: Product[]) => void;
   setSwitchAsset: (data: Product[]) => void;
   setComputerAsset: (data: Product[]) => void;
+  setNotebookAsset: (data: Product[]) => void;
+  setPhoneAsset: (data: Product[]) => void;
   setPlacedAssetsByFloor: (data: Record<string, AssetType[]>) => void;
 }
 
@@ -37,6 +39,8 @@ const GetAsset: React.FC<FetchAssetProps> = ({
   setSwitchAsset,
   setComputerAsset,
   setPlacedAssetsByFloor,
+  setNotebookAsset,
+  setPhoneAsset,
 }) => {
   useEffect(() => {
     // Fetch Computer
@@ -107,6 +111,40 @@ const GetAsset: React.FC<FetchAssetProps> = ({
       }
     };
 
+    //Fetch Notebook
+    const fetchNotebook = async () => {
+      try{
+        const response = await axios.get<ApiProduct[]>(
+          "https://ratiphong.tips.co.th:7112/api/Product/type/22",
+          { withCredentials: true }
+        );
+        const mappedNotebook: Product[] = response.data.map((p) => ({
+          assetCode: p.assetCode || p.serial,
+          name: p.prodName,
+        }));
+        setNotebookAsset(mappedNotebook);
+      }catch(err){
+        console.error("Error fetching notebook assets:", err);
+      }
+    };
+
+    //fetch IP Phone
+    const fetchPhone = async () => {
+      try{
+        const response = await axios.get<ApiProduct[]>(
+          "https://ratiphong.tips.co.th:7112/api/Product/type/50",
+          { withCredentials: true }
+        );
+        const mappedPhone: Product[] = response.data.map((p) => ({
+          assetCode: p.assetCode || p.serial,
+          name: p.prodName,
+        }));
+        setPhoneAsset(mappedPhone);
+      }catch(err){
+        console.error("Error fetching phone assets:", err);
+      }
+    };
+
     // Fetch Asset Positions
     const fetchAssets = async () => {
       try {
@@ -141,6 +179,8 @@ const GetAsset: React.FC<FetchAssetProps> = ({
     fetchUPS();
     fetchComputer();
     fetchSwitch();
+    fetchNotebook();
+    fetchPhone();
   }, []);
 
   return null;

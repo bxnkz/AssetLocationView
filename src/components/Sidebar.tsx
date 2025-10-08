@@ -13,10 +13,14 @@ interface SidebarProps {
   upsAssets?: Product[];
   switchAssets?: Product[];
   computerAssets?: Product[];
+  notebookAssets?: Product[];
+  phoneAssets?: Product[];
   onSelectPrinterCode?: (code: string) => void;
   onSelectUPSCode?: (code: string) => void;
   onSelectSwitchCode?: (code: string) => void;
   onSelectComputerCode?: (code: string) => void;
+  onSelectNotebookCode?: (code: string) => void;
+  onSelectPhoneCode?: (code: string) => void;
 }
 
 const Sidebar = ({
@@ -27,12 +31,16 @@ const Sidebar = ({
   upsAssets = [],
   switchAssets = [],
   computerAssets = [],
+  notebookAssets = [],
+  phoneAssets = [],
   onSelectPrinterCode,
   onSelectUPSCode,
   onSelectSwitchCode,
   onSelectComputerCode,
+  onSelectNotebookCode,
+  onSelectPhoneCode,
 }: SidebarProps) => {
-  const [showCodes, setShowCodes] = useState<"none" | "Printer" | "UPS" | "Switch" | "Computer">("none");
+  const [showCodes, setShowCodes] = useState<"none" | "Printer" | "UPS" | "Switch" | "Computer" | "Notebook" | "Phone">("none");
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleAssetClick = (name: string) => {
@@ -44,6 +52,10 @@ const Sidebar = ({
       setShowCodes("Switch");
     } else if (name === "Computer"){
       setShowCodes("Computer");
+    }else if (name === "Notebook"){
+      setShowCodes("Notebook")
+    }else if (name === "Phone"){
+      setShowCodes("Phone")
     }
     else {
       setShowCodes("none");
@@ -52,11 +64,13 @@ const Sidebar = ({
     }
   };
 
-  const handleCodeClick = (code: string, type: "Printer" | "UPS" | "Switch" | "Computer") => {
+  const handleCodeClick = (code: string, type: "Printer" | "UPS" | "Switch" | "Computer" | "Notebook" | "Phone") => {
     if (type === "Printer") onSelectPrinterCode?.(code);
     if (type === "UPS") onSelectUPSCode?.(code);
     if (type === "Switch") onSelectSwitchCode?.(code); 
     if (type === "Computer") onSelectComputerCode?.(code);
+    if (type === "Notebook") onSelectNotebookCode?.(code);
+    if (type === "Phone") onSelectPhoneCode?.(code);
     setShowCodes("none");
     onClose();
   };
@@ -66,6 +80,8 @@ const Sidebar = ({
     if (showCodes === "UPS") return upsAssets;
     if (showCodes === "Switch") return switchAssets;
     if (showCodes === "Computer") return computerAssets;
+    if (showCodes === "Notebook") return notebookAssets;
+    if (showCodes === "Phone") return phoneAssets;
     return [];
   };
 
@@ -89,7 +105,7 @@ const Sidebar = ({
 
       <div className="p-4 space-y-2 overflow-y-auto h-full">
         {showCodes === "none" ? (
-          ["Computer", "Printer", "UPS", "Switch"].map((item) => (
+          ["Computer", "Notebook", "Printer", "UPS", "Switch","Phone"].map((item) => (
             <div
               key={item}
               className="p-2 bg-gray-200 rounded cursor-pointer"

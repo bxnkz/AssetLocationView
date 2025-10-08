@@ -47,6 +47,16 @@ function App() {
     null
   );
 
+  const [notebookAssets, setNotebookAsset] = useState<Product[]>([]);
+  const [selectedNotebookCode, setSelectedNotebookCode] = useState<string | null>(
+    null
+  );
+
+  const [phoneAssets, setPhoneAsset] = useState<Product[]>([]);
+  const [selectedPhoneCode, setSelectedPhoneCode] = useState<string | null>(
+    null
+  );
+
   const getImageSrc = () => {
     return `/img/TIPS_B4_${selectedFloor}.png`;
   };
@@ -100,6 +110,10 @@ function App() {
         ? selectedSwitchCode
         : name === "Computer" && selectedComputerCode
         ? selectedComputerCode
+        : name === "Notebook" && selectedNotebookCode
+        ? selectedNotebookCode
+        : name === "Phone" && selectedPhoneCode
+        ? selectedPhoneCode
         : assetCode;
 
     if (!codeToAdd) return;
@@ -111,9 +125,14 @@ function App() {
         ? "UPS"
         : name === "Switch"
         ? "Switch"
+        : name === "Notebook"
+        ? "Notebook"
         : name === "Computer"
         ? "Computer"
-        : "Table";
+        : name === "Phone"
+        ? "Phone"
+        : undefined;
+
 
     const newAsset: AssetType = {
       id: codeToAdd,
@@ -135,6 +154,8 @@ function App() {
     if (name === "UPS") setSelectedUPSCode(null);
     if (name === "Switch") setSelectedSwitchCode(null);
     if (name === "Computer") setSelectedComputerCode(null);
+    if (name === "Notebook") setSelectedNotebookCode(null);
+    if (name === "Phone") setSelectedPhoneCode(null);
   };
 
   const handleSelectPrinterCode = (code: string) => {
@@ -155,6 +176,16 @@ function App() {
   const handleSelectComputerCode = (code: string) => {
     setSelectedComputerCode(code);
     handleAddAsset("Computer",code)
+  }
+
+  const handleSelectNotebookCode = (code: string) => {
+    setSelectedNotebookCode(code);
+    handleAddAsset("Notebook",code)
+  }
+
+  const handleSelectPhoneCode = (code: string) => {
+    setSelectedPhoneCode(code);
+    handleAddAsset("Phone",code)
   }
 
   const saveAssetPosition = async (asset: AssetType) => {
@@ -198,6 +229,8 @@ function App() {
           setUPSAssets={setUPSAssets}
           setSwitchAsset={setSwitchAsset}
           setComputerAsset={setComputerAsset}
+          setNotebookAsset={setNotebookAsset}
+          setPhoneAsset={setPhoneAsset}
           setPlacedAssetsByFloor={setPlacedAssetsByFloor}
         />
 
@@ -227,11 +260,15 @@ function App() {
           upsAssets={upsAssets}
           switchAssets={switchAssets}
           computerAssets={computerAssets}
+          notebookAssets={notebookAssets}
+          phoneAssets={phoneAssets}
           onAddAsset={handleAddAsset}
           onSelectPrinterCode={handleSelectPrinterCode}
           onSelectUPSCode={handleSelectUPSCode}
           onSelectSwitchCode={handleSelectSwitchCode}
           onSelectComputerCode={handleSelectComputerCode}
+          onSelectNotebookCode={handleSelectNotebookCode}
+          onSelectPhoneCode={handleSelectPhoneCode}
         />
       </main>
 
