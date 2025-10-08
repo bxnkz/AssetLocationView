@@ -2,23 +2,26 @@ import { Image as KonvaImage, Text, Group, Rect } from "react-konva";
 import useImage from "use-image";
 
 const assetImages: Record<string, string> = {
-  Table: "/assets/table.png",
+  // Table: "/assets/table.png",
   Printer: "/assets/printer.png",
   UPS: "/assets/ups.png",
   Switch: "/assets/hub.png",
+  Computer: "/assets/computer.png",
+  Notebook: "/assets/laptop.png",
+  Phone: "/assets/phone.png",
 };
 
 interface AssetImageProps {
   id: string;
-  type: "Table" | "Printer" | "UPS" | "Switch";
+  type?:  "Printer" | "UPS" | "Switch" | "Computer" | "Notebook" | "Phone";
   assetCode?: string;
   name: string;
   x: number;
   y: number;
-  width?: number; // ขนาดปรับได้
+  width?: number; 
   height?: number;
   onDragEnd: (id: string, x: number, y: number) => void;
-  onDelete?: () => void; // callback สำหรับลบ asset
+  onDelete?: () => void;
 }
 
 const AssetImage = ({
@@ -26,14 +29,14 @@ const AssetImage = ({
   type,
   x,
   y,
-  width = 45,
-  height = 45,
+  width = 35,
+  height = 35,
   onDragEnd,
   assetCode,
   name,
   onDelete,
 }: AssetImageProps) => {
-  const [image] = useImage(assetImages[type] || assetImages["Table"]); // default Table
+  const [image] = useImage(assetImages[type!] || assetImages["Table"]);
 
   return (
     <Group
@@ -54,7 +57,7 @@ const AssetImage = ({
         <Rect width={16} height={16} fill="red" cornerRadius={4} shadowBlur={2} />
         <Text
           text="X"
-          fontSize={12}
+          fontSize={8}
           fill="white"
           align="center"
           verticalAlign="middle"
@@ -66,10 +69,11 @@ const AssetImage = ({
       {/* ข้อความชื่อ/assetCode */}
       <Text
         text={assetCode || name}
-        y={height + 5}
-        // width={width}
+        y={height + 3}
+        width={50}
+        x={width/2 - 25}
         align="center"
-        fontSize={9}
+        fontSize={7}
         fill="black"
       />
     </Group>

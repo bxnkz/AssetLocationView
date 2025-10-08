@@ -20,7 +20,7 @@ const Navbar: React.FC<NavBarProps> = ({ name, onLogout,selectedFloor,onFloorCha
         <label htmlFor="">
           Select Site : 
           <select name="" id="" className="ml-2 rounded-md  bg-gray-400 border-black text-black">
-            <option value="Fl1">B4</option>
+            <option value="B4">B4</option>
             {/* <option value="Fl2">CD</option> */}
           </select>
         </label>
