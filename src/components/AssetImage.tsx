@@ -6,11 +6,14 @@ const assetImages: Record<string, string> = {
   Printer: "/assets/printer.png",
   UPS: "/assets/ups.png",
   Switch: "/assets/hub.png",
+  Computer: "/assets/computer.png",
+  Notebook: "/assets/notebook.png",
+  Phone: "/assets/phone.png",
 };
 
 interface AssetImageProps {
   id: string;
-  type: "Table" | "Printer" | "UPS" | "Switch";
+  type: "Computer" | "Printer" /*| "Table"*/ | "UPS" | "Switch" | "Notebook" | "Phone";
   assetCode?: string;
   name: string;
   x: number;

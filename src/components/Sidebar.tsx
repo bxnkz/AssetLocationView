@@ -1,9 +1,5 @@
 import { useState } from "react";
-
-interface Product {
-  assetCode: string;
-  name: string;
-}
+import {Product} from "./AssetManager";
 
 interface SidebarProps {
   open: boolean;
@@ -12,6 +8,9 @@ interface SidebarProps {
   printerAssets?: Product[];
   upsAssets?: Product[];
   switchAssets?: Product[];
+  computerAssets?: Product[];
+  notebookAssets?: Product[];
+  phoneAssets?: Product[];
 }
 
 const Sidebar = ({
@@ -21,13 +20,16 @@ const Sidebar = ({
   printerAssets = [],
   upsAssets = [],
   switchAssets = [],
+  computerAssets = [],
+  notebookAssets = [],
+  phoneAssets = [],
 }: SidebarProps) => {
-  const [showCodes, setShowCodes] = useState<"none" | "Printer" | "UPS" | "Switch">("none");
+  const [showCodes, setShowCodes] = useState<"none" | "Printer" | "UPS" | "Notebook" | "Computer" | "Phone" | "Switch">("none");
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleAssetClick = (name: string) => {
-    if (["Printer", "UPS", "Switch"].includes(name)) {
-      setShowCodes(name as "Printer" | "UPS" | "Switch");
+    if (["Printer", "UPS", "Switch", "Notebook", "Computer", "Phone"].includes(name)) {
+      setShowCodes(name as "Printer" | "UPS" | "Switch" | "Notebook" | "Computer"| "Phone" );
     } else {
       setShowCodes("none");
       onAddAsset(name);
@@ -47,6 +49,9 @@ const Sidebar = ({
     if (showCodes === "Printer") return printerAssets;
     if (showCodes === "UPS") return upsAssets;
     if (showCodes === "Switch") return switchAssets;
+    if (showCodes === "Computer") return computerAssets;
+    if (showCodes === "Notebook") return notebookAssets;
+    if (showCodes === "Phone") return phoneAssets;
     return [];
   };
 
@@ -71,7 +76,7 @@ const Sidebar = ({
 
       <div className="p-4 space-y-2 overflow-y-auto h-full">
         {showCodes === "none" ? (
-          ["Table", "Printer", "UPS", "Switch"].map((item) => (
+          ["Table", "Printer", "UPS", "Switch", "Computer", "Notebook", "Phone"].map((item) => (
             <div
               key={item}
               className="p-2 bg-gray-200 rounded cursor-pointer"

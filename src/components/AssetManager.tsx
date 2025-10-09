@@ -4,7 +4,7 @@ import axios from "axios";
 
 export interface AssetType {
   id: string;
-  type: "Table" | "Printer" | "UPS" | "Switch";
+  type: "Computer" | "Printer" /*| "Table"*/ | "UPS" | "Switch" | "Notebook" | "Phone";
   name: string;
   assetCode?: string;
   x: number;
@@ -35,6 +35,9 @@ interface AssetManagerProps {
     printerAssets: Product[];
     upsAssets: Product[];
     switchAssets: Product[];
+    notebookAssets: Product[];
+    phoneAssets: Product[];
+    computerAssets: Product[];
     handleDragEnd: (id: string, x: number, y: number) => void;
     handleDeleteAsset: (asset: AssetType) => void;
     handleAddAsset: (name: string, assetCode?: string) => void;
@@ -53,6 +56,9 @@ const AssetManager: React.FC<AssetManagerProps> = ({
   const [printerAssets, setPrinterAssets] = useState<Product[]>([]);
   const [upsAssets, setUPSAssets] = useState<Product[]>([]);
   const [switchAssets, setSwitchAssets] = useState<Product[]>([]);
+  const [notebookAssets, setNotebookAssets] = useState<Product[]>([]);
+  const [phoneAssets, setPhoneAssets] = useState<Product[]>([]);
+  const [computerAssets, setComputerAssets] = useState<Product[]>([]);
 
   // โหลด asset จาก API
   useEffect(() => {
@@ -75,6 +81,9 @@ const AssetManager: React.FC<AssetManagerProps> = ({
     fetchAssetsByType(42, setPrinterAssets); // Printer
     fetchAssetsByType(2, setUPSAssets);      // UPS
     fetchAssetsByType(12, setSwitchAssets);  // Switch
+    fetchAssetsByType(22, setNotebookAssets);  // Notebook
+    fetchAssetsByType(50, setPhoneAssets);  // Phone
+    fetchAssetsByType(1, setComputerAssets);  // Computer
   }, [selectedSite, selectedFloor, selectedDepartment]);
 
   // โหลดตำแหน่ง asset จาก floor
@@ -146,7 +155,7 @@ const AssetManager: React.FC<AssetManagerProps> = ({
 
   const handleAddAsset = (name: string, assetCode?: string) => {
     if (!assetCode) return;
-    const type = name === "Printer" ? "Printer" : name === "UPS" ? "UPS" : name === "Switch" ? "Switch" : "Table";
+    const type = name === "Printer" ? "Printer" : name === "UPS" ? "UPS" : name === "Switch" ? "Switch" : name === "Notebook" ? "Notebook" : name === "Computer" ? "Computer" : "Phone";
     const newAsset: AssetType = { id: assetCode, type, name, assetCode, x: 50, y: 50 };
     setPlacedAssets([...placedAssets, newAsset]);
     saveAssetPosition(newAsset);
@@ -156,6 +165,9 @@ const AssetManager: React.FC<AssetManagerProps> = ({
     printerAssets,
     upsAssets,
     switchAssets,
+    notebookAssets,
+    phoneAssets,
+    computerAssets,
     handleDragEnd,
     handleDeleteAsset,
     handleAddAsset

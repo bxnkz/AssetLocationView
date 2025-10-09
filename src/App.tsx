@@ -45,6 +45,9 @@ function App() {
           printerAssets,
           upsAssets,
           switchAssets,
+          computerAssets,
+          notebookAssets,
+          phoneAssets,
           handleDragEnd,
           handleDeleteAsset,
           handleAddAsset,
@@ -79,6 +82,9 @@ function App() {
               printerAssets={printerAssets}
               upsAssets={upsAssets}
               switchAssets={switchAssets}
+              computerAssets={computerAssets}
+              notebookAssets={notebookAssets}
+              phoneAssets={phoneAssets}
               onAddAsset={handleAddAsset}
             />
           </main>
