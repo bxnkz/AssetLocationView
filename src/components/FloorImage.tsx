@@ -20,7 +20,7 @@ const FloorImage = ({
   const src = getImageSrc();
   const [image] = useImage(src);
 
-  return <KonvaImage image={image} width={800} height={600} />;
+  return <KonvaImage image={image} width={1362} height={890} />;
 };
 
 export default FloorImage;

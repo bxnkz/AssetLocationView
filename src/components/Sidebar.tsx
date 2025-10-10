@@ -76,7 +76,7 @@ const Sidebar = ({
 
       <div className="p-4 space-y-2 overflow-y-auto h-full">
         {showCodes === "none" ? (
-          ["Table", "Printer", "UPS", "Switch", "Computer", "Notebook", "Phone"].map((item) => (
+          ["Printer", "UPS", "Switch", "Computer", "Notebook", "Phone"].map((item) => (
             <div
               key={item}
               className="p-2 bg-gray-200 rounded cursor-pointer"

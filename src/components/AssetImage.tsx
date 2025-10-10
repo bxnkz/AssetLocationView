@@ -22,6 +22,7 @@ interface AssetImageProps {
   height?: number;
   onDragEnd: (id: string, x: number, y: number) => void;
   onDelete?: () => void; // callback สำหรับลบ asset
+  onClick?: () => void;
 }
 
 const AssetImage = ({
@@ -29,12 +30,13 @@ const AssetImage = ({
   type,
   x,
   y,
-  width = 45,
-  height = 45,
+  width = 30,
+  height = 30,
   onDragEnd,
   assetCode,
   name,
   onDelete,
+  onClick,
 }: AssetImageProps) => {
   const [image] = useImage(assetImages[type] || assetImages["Table"]); // default Table
 
@@ -44,6 +46,7 @@ const AssetImage = ({
       y={y}
       draggable
       onDragEnd={(e) => onDragEnd(id, e.target.x(), e.target.y())}
+      onClick={onClick}
     >
       {/* รูป asset */}
       <KonvaImage image={image} width={width} height={height} />
@@ -52,12 +55,15 @@ const AssetImage = ({
       <Group
         x={width - 12} // มุมขวาบน
         y={-8}
-        onClick={() => onDelete?.()}
+        onClick={(e)=>{
+          e.cancelBubble = true;
+          onDelete?.();
+        }}
       >
         <Rect width={16} height={16} fill="red" cornerRadius={4} shadowBlur={2} />
         <Text
           text="X"
-          fontSize={12}
+          fontSize={8}
           fill="white"
           align="center"
           verticalAlign="middle"
@@ -69,10 +75,11 @@ const AssetImage = ({
       {/* ข้อความชื่อ/assetCode */}
       <Text
         text={assetCode || name}
-        y={height + 5}
-        // width={width}
+        y={height + 3}
+        width={50}
+        x={width/2 - 25}
         align="center"
-        fontSize={9}
+        fontSize={7}
         fill="black"
       />
     </Group>

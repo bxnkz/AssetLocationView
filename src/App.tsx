@@ -6,7 +6,10 @@ import Sidebar from "./components/Sidebar";
 import FloatingButton from "./components/FloatingButton";
 import { Stage, Layer } from "react-konva";
 import { Auth } from "./hooks/Auth";
-import AssetManager, { AssetType, Product } from "./components/AssetManager";
+import AssetManager, { ApiProduct, AssetType, Product } from "./components/AssetManager";
+import AssetPopup from "./components/AssetPopup";
+import axios from "axios";
+import { Label, Tag, Text } from "react-konva";
 
 function App() {
   const { user, loading, loggingOut, handleLogout } = Auth();
@@ -16,6 +19,35 @@ function App() {
   const [selectedDepartment, setSelectedDepartment] = useState("IT");
   const [placedAssets, setPlacedAssets] = useState<AssetType[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [selectedAsset, setSelectedAsset] = useState<AssetType | null>(null);
+  const [assetDetails, setAssetDetails] = useState<ApiProduct | null>(null);
+  const [isPopupLoading, setIsPopupLoading] = useState(false);
+
+  const handleAssetClick = async (asset: AssetType) => {
+    if(!asset.assetCode) return;
+
+    setSelectedAsset(asset);
+    setIsPopupLoading(true);
+    setAssetDetails(null);
+
+    try{
+      const res = await axios.get<ApiProduct>(
+        `https://ratiphong.tips.co.th:7112/api/Product?assetCode=${encodeURIComponent(asset.assetCode)}`,
+        { withCredentials: true }
+      );
+      setAssetDetails(res.data);
+    }catch(error){
+      console.error("Error fetching asset details:", error);
+    }finally{
+      setIsPopupLoading(false);
+    }
+  };
+
+  const handleClosePopup = () =>{
+    setSelectedAsset(null);
+    setAssetDetails(null);
+  }
 
   if (loading) return <div>Loading...</div>;
   if (!user && !loggingOut) return <div>Redirect to Log in...</div>;
@@ -53,7 +85,11 @@ function App() {
           handleAddAsset,
         }) => (
           <main className="flex-1 p-4 flex justify-center items-start relative">
-            <Stage width={800} height={600}>
+            <Stage width={1362} height={890} onClick={(e) => {
+              if(e.target === e.target.getStage()){
+                handleClosePopup();
+              }
+            }}>
               <Layer>
                 <FloorImage
                   selectedSite={selectedSite}
@@ -71,8 +107,20 @@ function App() {
                     y={asset.y}
                     onDragEnd={handleDragEnd}
                     onDelete={() => handleDeleteAsset(asset)}
+                    onClick={() => handleAssetClick(asset)}
                   />
                 ))}
+                {isPopupLoading && selectedAsset && (
+                  <Text text="Loading..." x={selectedAsset.x + 40} y={selectedAsset.y} fontSize={14} fill="black" />
+                )}
+                
+                {!isPopupLoading && selectedAsset && assetDetails && (
+                  <AssetPopup
+                    asset={selectedAsset}
+                    details={assetDetails}
+                    onClose={handleClosePopup}
+                  />
+                )}
               </Layer>
             </Stage>
 
