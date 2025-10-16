@@ -73,54 +73,56 @@ const Sidebar = ({
       }`}
     >
       <div className="flex justify-between items-center p-4 border-b">
-        <h2 className="text-lg font-bold">Asset</h2>
+        Select Asset Type
         <button onClick={onClose}>
           <i className="bi bi-x-lg text-xl"></i>
         </button>
       </div>
 
       <div className="p-4 space-y-2 overflow-y-auto h-full">
-        {showCodes === "none" ? (
-          ["Printer", "UPS", "Switch", "Computer", "Notebook", "Phone"].map((item) => (
-            <div
-              key={item}
-              className="p-2 bg-gray-200 rounded cursor-pointer"
-              onClick={() => handleAssetClick(item)}
-            >
-              {item}
-            </div>
-          ))
-        ) : (
-          <>
-            <button
-              onClick={handleGoback}
-              className="mb-4 text-blue-600 hover:underline"
-            >
-              &larr; Back to Assets
-            </button>
+        <div key={showCodes}>
+          {showCodes === "none" ? (
+            ["Printer", "UPS", "Switch", "Computer", "Notebook", "Phone"].map((item) => (
+              <div
+                key={item}
+                className="p-2 bg-gray-200 rounded cursor-pointer border border-black"
+                onClick={() => handleAssetClick(item)}
+              >
+                {item}
+              </div>
+            ))
+          ) : (
+            <>
+              <button
+                onClick={handleGoback}
+                className="mb-4 text-blue-600 hover:underline"
+              >
+                &larr; Back
+              </button>
 
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search assets ..."
-              className="w-full p-2 border rounded mb-3"
-            />
-            {filteredAssets.length > 0 ? (
-              filteredAssets.map((p) => (
-                <div
-                  key={p.assetCode}
-                  className="p-2 bg-gray-200 rounded cursor-pointer"
-                  onClick={() => handleCodeClick(p.assetCode)}
-                >
-                  {p.assetCode} - {p.name}
-                </div>
-              ))
-            ) : (
-              <div>Loading data...</div>
-            )}
-          </>
-        )}
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search assets ..."
+                className="w-full p-2 border rounded mb-3"
+              />
+              {filteredAssets.length > 0 ? (
+                filteredAssets.map((p) => (
+                  <div
+                    key={p.assetCode}
+                    className="p-2 bg-gray-200 rounded cursor-pointer"
+                    onClick={() => handleCodeClick(p.assetCode)}
+                  >
+                    {p.assetCode} - {p.name}
+                  </div>
+                ))
+              ) : (
+                <div>Loading data...</div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
