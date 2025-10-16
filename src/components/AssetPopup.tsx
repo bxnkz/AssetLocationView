@@ -20,6 +20,8 @@ const AssetPopup = ({ asset, details, onClose }: AssetPopupProps) => {
     `Serial No: ${details.serial || "N/A"}`,
   ].join("\n");
 
+  const POPUP_WIDTH = 250;
+
   return (
     <Label x={popupX} y={popupY}>
       <Tag
@@ -42,13 +44,14 @@ const AssetPopup = ({ asset, details, onClose }: AssetPopupProps) => {
         fontSize={12}
         padding={10}
         fill="black"
+        width={POPUP_WIDTH}
       />
       {/* ปุ่มปิด Pop-up */}
       <Text
         text="X"
         fontSize={12}
         fill="red"
-        x={170}
+        x={POPUP_WIDTH - 15}
         y={5}
         padding={5}
         onClick={onClose}

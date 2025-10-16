@@ -61,6 +61,11 @@ const Sidebar = ({
       p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleGoback = () => {
+    setShowCodes("none");
+    setSearchTerm("");
+  }
+
   return (
     <div
       className={`absolute top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ${
@@ -88,10 +93,7 @@ const Sidebar = ({
         ) : (
           <>
             <button
-              onClick={() => {
-                setShowCodes("none");
-                setSearchTerm(""); // reset search
-              }}
+              onClick={handleGoback}
               className="mb-4 text-blue-600 hover:underline"
             >
               &larr; Back to Assets
