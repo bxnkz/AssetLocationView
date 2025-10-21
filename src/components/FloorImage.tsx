@@ -16,7 +16,7 @@ const FloorImage = ({
     return `/img/TIPS_${selectedSite}_${selectedFloor}.png`;
   };
 
-  
+
   const src = getImageSrc();
   const [image] = useImage(src);
 
