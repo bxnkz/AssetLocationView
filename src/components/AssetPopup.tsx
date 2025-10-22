@@ -1,6 +1,5 @@
 import { Label, Tag, Text } from "react-konva";
-import { ApiProduct } from "./AssetManager";
-import { AssetType } from "./AssetManager";
+import { ApiProduct, AssetType } from "./AssetManager";
 
 interface AssetPopupProps {
   asset: AssetType;
@@ -9,8 +8,34 @@ interface AssetPopupProps {
 }
 
 const AssetPopup = ({ asset, details, onClose }: AssetPopupProps) => {
-  const popupX = asset.x + 40;
-  const popupY = asset.y;
+  const POPUP_WIDTH = 250;
+  const POPUP_HEIGHT = 120;
+  const STAGE_WIDTH = 1400;
+  const STAGE_HEIGHT = 900;
+
+  // คำนวณตำแหน่งเริ่มต้นของ popup
+  let popupX = asset.x + 40; // ด้านขวาของ asset
+  let popupY = asset.y;
+
+  // ตรวจขอบขวา - ถ้าเลย stage ให้แสดงทางซ้ายแทน
+  if (popupX + POPUP_WIDTH > STAGE_WIDTH) {
+    popupX = asset.x - POPUP_WIDTH - 20;
+  }
+
+  // ตรวจขอบล่าง
+  if (popupY + POPUP_HEIGHT > STAGE_HEIGHT) {
+    popupY = STAGE_HEIGHT - POPUP_HEIGHT - 10;
+  }
+
+  // ตรวจขอบบน
+  if (popupY < 10) {
+    popupY = 10;
+  }
+
+  // ตรวจขอบซ้าย
+  if (popupX < 10) {
+    popupX = 10;
+  }
 
   const infoText = [
     `Asset Code: ${details.assetCode || "N/A"}`,
@@ -19,8 +44,6 @@ const AssetPopup = ({ asset, details, onClose }: AssetPopupProps) => {
     `IP Address: ${details.ip || "N/A"}`,
     `Serial No: ${details.serial || "N/A"}`,
   ].join("\n");
-
-  const POPUP_WIDTH = 250;
 
   return (
     <Label x={popupX} y={popupY}>

@@ -84,8 +84,8 @@ function App() {
           handleDeleteAsset,
           handleAddAsset,
         }) => (
-          <main className="flex-1 p-4 flex justify-center items-start relative">
-            <Stage width={1362} height={890} onClick={(e) => {
+          <main className="flex-1 p-4 flex justify-center items-center relative overflow-auto">
+            <Stage width={1400} height={900} onClick={(e) => {
               if(e.target === e.target.getStage()){
                 handleClosePopup();
               }
@@ -123,7 +123,7 @@ function App() {
                 )}
               </Layer>
             </Stage>
-
+          
             <Sidebar
               open={sidebarOpen}
               onClose={() => setSidebarOpen(false)}

@@ -139,7 +139,7 @@ const AssetManager: React.FC<AssetManagerProps> = ({
   };
 
   const handleDeleteAsset = async (asset: AssetType) => {
-    const confirmed = window.confirm("Are you sure delete asset?");
+    const confirmed = window.confirm(`Are you sure delete asset : ${asset.assetCode} ?`);
     if (!confirmed) return;
     try {
       await axios.post(
