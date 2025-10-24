@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-
 export interface AssetType {
   id: string;
-  type: "Computer" | "Printer" /*| "Table"*/ | "UPS" | "Switch" | "Notebook" | "Phone";
+  type: "Computer" | "Printer" | "UPS" | "Switch" | "Notebook" | "Phone";
   name: string;
   assetCode?: string;
   x: number;
@@ -78,12 +77,12 @@ const AssetManager: React.FC<AssetManagerProps> = ({
       }
     };
 
-    fetchAssetsByType(42, setPrinterAssets); // Printer
-    fetchAssetsByType(2, setUPSAssets);      // UPS
-    fetchAssetsByType(12, setSwitchAssets);  // Switch
-    fetchAssetsByType(22, setNotebookAssets);  // Notebook
-    fetchAssetsByType(50, setPhoneAssets);  // Phone
-    fetchAssetsByType(1, setComputerAssets);  // Computer
+    fetchAssetsByType(42, setPrinterAssets);
+    fetchAssetsByType(2, setUPSAssets);
+    fetchAssetsByType(12, setSwitchAssets);
+    fetchAssetsByType(22, setNotebookAssets);
+    fetchAssetsByType(50, setPhoneAssets);
+    fetchAssetsByType(1, setComputerAssets);
   }, [selectedSite, selectedFloor, selectedDepartment]);
 
   // โหลดตำแหน่ง asset จาก floor
@@ -111,11 +110,11 @@ const AssetManager: React.FC<AssetManagerProps> = ({
     fetchAssetPositions();
   }, [selectedSite, selectedFloor, selectedDepartment]);
 
-  // Save asset
-  const saveAssetPosition = async (asset: AssetType) => {
+  // Save asset position (ลาก)
+  const updateAssetPosition = async (asset: AssetType) => {
     try {
       await axios.post(
-        `https://ratiphong.tips.co.th:7112/api/AssetPosition`,
+        `https://ratiphong.tips.co.th:7112/api/AssetPosition/UpdatePosition`,
         {
           AssetCode: asset.assetCode,
           Floor: selectedFloor,
@@ -125,7 +124,7 @@ const AssetManager: React.FC<AssetManagerProps> = ({
         },
         { withCredentials: true, headers: { "Content-Type": "application/json" } }
       );
-      console.log("Saved asset:", asset);
+      console.log("Updated asset position:", asset);
     } catch (err) {
       console.error(err);
     }
@@ -135,7 +134,7 @@ const AssetManager: React.FC<AssetManagerProps> = ({
     const updated = placedAssets.map(a => a.id === id ? { ...a, x, y } : a);
     setPlacedAssets(updated);
     const moved = updated.find(a => a.id === id);
-    if (moved) saveAssetPosition(moved);
+    if (moved) updateAssetPosition(moved);
   };
 
   const handleDeleteAsset = async (asset: AssetType) => {
@@ -153,12 +152,63 @@ const AssetManager: React.FC<AssetManagerProps> = ({
     }
   };
 
-  const handleAddAsset = (name: string, assetCode?: string) => {
+  // เพิ่ม asset ใหม่ (ตรวจสอบ duplicate ทุกชั้น)
+  const handleAddAsset = async (name: string, assetCode?: string) => {
     if (!assetCode) return;
-    const type = name === "Printer" ? "Printer" : name === "UPS" ? "UPS" : name === "Switch" ? "Switch" : name === "Notebook" ? "Notebook" : name === "Computer" ? "Computer" : "Phone";
-    const newAsset: AssetType = { id: assetCode, type, name, assetCode, x: 50, y: 50 };
-    setPlacedAssets([...placedAssets, newAsset]);
-    saveAssetPosition(newAsset);
+
+    const type =
+      name === "Printer"
+        ? "Printer"
+        : name === "UPS"
+        ? "UPS"
+        : name === "Switch"
+        ? "Switch"
+        : name === "Notebook"
+        ? "Notebook"
+        : name === "Computer"
+        ? "Computer"
+        : "Phone";
+
+    const newAsset: AssetType = {
+      id: assetCode,
+      type,
+      name,
+      assetCode,
+      x: 50,
+      y: 50,
+    };
+
+    try {
+      const res = await axios.post(
+        `https://ratiphong.tips.co.th:7112/api/AssetPosition/AddAsset`,
+        {
+          AssetCode: newAsset.assetCode,
+          Floor: selectedFloor,
+          PosX: newAsset.x,
+          PosY: newAsset.y,
+          UpdatedBy: userName || "Unknown",
+        },
+        { withCredentials: true, headers: { "Content-Type": "application/json" } }
+      );
+
+      setPlacedAssets([...placedAssets, {
+        ...newAsset,
+        x: res.data.posX,
+        y: res.data.posY,
+      }]);
+      console.log("Added new asset:", newAsset);
+
+    } catch (err: any) {
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 409) {
+          alert(err.response.data.message); // duplicate
+        } else {
+          alert("เกิดข้อผิดพลาดในการเพิ่มอุปกรณ์");
+        }
+      } else {
+        console.error(err);
+      }
+    }
   };
 
   return children({
