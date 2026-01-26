@@ -15,13 +15,7 @@ export interface Product {
   name: string;
 }
 
-export interface ApiProduct {
-  assetCode: string;
-  prodName: string;
-  prodDesc: string;
-  ip: string;
-  serial: string;
-}
+const API_BASE_URL = "http://localhost:5000/api";
 
 interface AssetManagerProps {
   selectedSite: string;
@@ -59,21 +53,24 @@ const AssetManager: React.FC<AssetManagerProps> = ({
   const [phoneAssets, setPhoneAssets] = useState<Product[]>([]);
   const [computerAssets, setComputerAssets] = useState<Product[]>([]);
 
-  // โหลด asset จาก API
+  const getAuthConfig = () => {
+    const token = localStorage.getItem("token");
+    return {
+      headers: { Authorization: `Bearer ${token}` }
+    };
+  };
+
   useEffect(() => {
     const fetchAssetsByType = async (type: number, setter: React.Dispatch<React.SetStateAction<Product[]>>) => {
       try {
-        const res = await axios.get<ApiProduct[]>(
-          `https://ratiphong.tips.co.th:7112/api/Product/type/${type}`,
-          { withCredentials: true }
-        );
-        const mapped: Product[] = res.data.map(p => ({
-          assetCode: p.assetCode || p.serial,
+        const res = await axios.get(`${API_BASE_URL}/products/type/${type}`, getAuthConfig());
+        const mapped: Product[] = res.data.map((p: any) => ({
+          assetCode: p.assetCode,
           name: p.prodName,
         }));
         setter(mapped);
       } catch (err) {
-        console.error("Error fetching assets type", type, err);
+        console.error(`Error fetching assets type ${type}:`, err);
       }
     };
 
@@ -83,17 +80,14 @@ const AssetManager: React.FC<AssetManagerProps> = ({
     fetchAssetsByType(22, setNotebookAssets);
     fetchAssetsByType(50, setPhoneAssets);
     fetchAssetsByType(1, setComputerAssets);
-  }, [selectedSite, selectedFloor, selectedDepartment]);
+  }, []);
 
-  // โหลดตำแหน่ง asset จาก floor
   useEffect(() => {
     const fetchAssetPositions = async () => {
+      if (!selectedFloor) return;
       try {
-        const res = await axios.get<{ assetCode: string; posX: number; posY: number; typeName: string }[]>(
-          `https://ratiphong.tips.co.th:7112/api/AssetPosition/${selectedFloor}`,
-          { withCredentials: true }
-        );
-        const mapped: AssetType[] = res.data.map(a => ({
+        const res = await axios.get(`${API_BASE_URL}/positions/${selectedFloor}`, getAuthConfig());
+        const mapped: AssetType[] = res.data.map((a: any) => ({
           id: a.assetCode,
           type: a.typeName as AssetType["type"],
           name: a.typeName,
@@ -103,18 +97,17 @@ const AssetManager: React.FC<AssetManagerProps> = ({
         }));
         setPlacedAssets(mapped);
       } catch (err) {
-        console.error("Error fetching asset positions", err);
+        console.error("Error fetching asset positions:", err);
       }
     };
 
     fetchAssetPositions();
-  }, [selectedSite, selectedFloor, selectedDepartment]);
+  }, [selectedFloor]);
 
-  // Save asset position (ลาก)
   const updateAssetPosition = async (asset: AssetType) => {
     try {
       await axios.post(
-        `https://ratiphong.tips.co.th:7112/api/AssetPosition/UpdatePosition`,
+        `${API_BASE_URL}/positions/update`,
         {
           AssetCode: asset.assetCode,
           Floor: selectedFloor,
@@ -122,11 +115,11 @@ const AssetManager: React.FC<AssetManagerProps> = ({
           PosY: asset.y,
           UpdatedBy: userName || "Unknown",
         },
-        { withCredentials: true, headers: { "Content-Type": "application/json" } }
+        getAuthConfig()
       );
-      console.log("Updated asset position:", asset);
+      console.log("Updated asset position in MongoDB:", asset.assetCode);
     } catch (err) {
-      console.error(err);
+      console.error("Update position failed:", err);
     }
   };
 
@@ -137,38 +130,10 @@ const AssetManager: React.FC<AssetManagerProps> = ({
     if (moved) updateAssetPosition(moved);
   };
 
-  const handleDeleteAsset = async (asset: AssetType) => {
-    const confirmed = window.confirm(`Are you sure delete asset : ${asset.assetCode} ?`);
-    if (!confirmed) return;
-    try {
-      await axios.post(
-        "https://ratiphong.tips.co.th:7112/api/AssetPosition/DeleteAsset",
-        { AssetCode: asset.assetCode, Floor: selectedFloor },
-        { withCredentials: true }
-      );
-      setPlacedAssets(placedAssets.filter(a => a.id !== asset.id));
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // เพิ่ม asset ใหม่ (ตรวจสอบ duplicate ทุกชั้น)
   const handleAddAsset = async (name: string, assetCode?: string) => {
     if (!assetCode) return;
 
-    const type =
-      name === "Printer"
-        ? "Printer"
-        : name === "UPS"
-        ? "UPS"
-        : name === "Switch"
-        ? "Switch"
-        : name === "Notebook"
-        ? "Notebook"
-        : name === "Computer"
-        ? "Computer"
-        : "Phone";
-
+    const type = name as AssetType["type"];
     const newAsset: AssetType = {
       id: assetCode,
       type,
@@ -180,15 +145,16 @@ const AssetManager: React.FC<AssetManagerProps> = ({
 
     try {
       const res = await axios.post(
-        `https://ratiphong.tips.co.th:7112/api/AssetPosition/AddAsset`,
+        `${API_BASE_URL}/positions/add`,
         {
           AssetCode: newAsset.assetCode,
           Floor: selectedFloor,
           PosX: newAsset.x,
           PosY: newAsset.y,
           UpdatedBy: userName || "Unknown",
+          TypeName: name
         },
-        { withCredentials: true, headers: { "Content-Type": "application/json" } }
+        getAuthConfig()
       );
 
       setPlacedAssets([...placedAssets, {
@@ -196,18 +162,30 @@ const AssetManager: React.FC<AssetManagerProps> = ({
         x: res.data.posX,
         y: res.data.posY,
       }]);
-      console.log("Added new asset:", newAsset);
+      console.log("Successfully added asset to MongoDB:", assetCode);
 
     } catch (err: any) {
-      if (axios.isAxiosError(err)) {
-        if (err.response?.status === 409) {
-          alert(err.response.data.message); // duplicate
-        } else {
-          alert("เกิดข้อผิดพลาดในการเพิ่มอุปกรณ์");
-        }
+      if (err.response?.status === 409) {
+        alert("อุปกรณ์นี้ถูกวางไว้ในแผนผังแล้ว");
       } else {
+        alert("เกิดข้อผิดพลาดในการเพิ่มอุปกรณ์ลงฐานข้อมูล");
         console.error(err);
       }
+    }
+  };
+  
+  const handleDeleteAsset = async (asset: AssetType) => {
+    const confirmed = window.confirm(`ยืนยันการลบอุปกรณ์รหัส : ${asset.assetCode} ?`);
+    if (!confirmed) return;
+    try {
+      await axios.post(
+        `${API_BASE_URL}/positions/delete`,
+        { AssetCode: asset.assetCode },
+        getAuthConfig()
+      );
+      setPlacedAssets(placedAssets.filter(a => a.id !== asset.id));
+    } catch (err) {
+      console.error("Delete failed:", err);
     }
   };
 

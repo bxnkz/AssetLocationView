@@ -63,12 +63,12 @@ const Navbar: React.FC<NavBarProps> = ({
   };
 
   return (
-    <nav className="flex flex-wrap md:flex-nowrap justify-between items-center bg-blue-900 text-white px-5 py-2 shadow-md text-md font-medium">
-      <img
-        src="/img/TIPS-logo-white.png"
+    <nav className="flex flex-wrap md:flex-nowrap justify-between items-center bg-green-800 text-white px-5 py-2 shadow-md text-md font-medium">
+      {/* <img
+        src=""
         alt="Logo"
         className="h-8 md:h-10 order-1"
-      />
+      /> */}
       <div className="flex items-center gap-2 order-2 md:order-3">
         <span>Welcome , {name}</span>
         <button

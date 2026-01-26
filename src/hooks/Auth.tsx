@@ -3,63 +3,37 @@ import axios from "axios";
 
 interface User {
   name: string;
+  username: string;
 }
-
-const FRONTEND_URL = "https://ratiphong.tips.co.th:5173";
 
 export function Auth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
-  // ตรวจสอบการล็อกอิน
   useEffect(() => {
-    let isMounted = true;
+    const checkAuth = () => {
+      const token = localStorage.getItem("token");
+      const savedUser = localStorage.getItem("user");
 
-    const checkAuthentication = async () => {
-      try {
-        const response = await axios.get<User>(
-          "https://ratiphong.tips.co.th:7112/api/User/Profile",
-          { withCredentials: true }
-        );
-
-        if (isMounted && response.data?.name) {
-          setUser(response.data);
-        }
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-          setAuthChecked(true);
-        }
+      if (token && savedUser) {
+        setUser(JSON.parse(savedUser));
+        // ตั้งค่า Token ให้ Axios อัตโนมัติสำหรับการดึงข้อมูลครั้งต่อๆ ไป
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      } else {
+        setUser(null);
       }
+      setLoading(false);
     };
-
-    checkAuthentication();
-
-    return () => {
-      isMounted = false;
-    };
+    checkAuth();
   }, []);
 
-  // ถ้าไม่ล็อกอิน ให้ redirect ไป SSO
-  useEffect(() => {
-    if (!loggingOut && authChecked && !user) {
-      window.location.href = `https://intranet.tips.co.th/ssocore/login?ReturnUrl=${encodeURIComponent(
-        FRONTEND_URL
-      )}`;
-    }
-  }, [authChecked, user, loggingOut]);
-
-  // Logout function
   const handleLogout = () => {
-    setLoggingOut(true);
-    window.location.href = `https://intranet.tips.co.th/ssocore/logout?ReturnUrl=${encodeURIComponent(
-      FRONTEND_URL
-    )}`;
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    delete axios.defaults.headers.common['Authorization'];
+    setUser(null);
+    window.location.reload(); // รีโหลดเพื่อให้ App.tsx แสดงหน้า Login
   };
 
-  return { user, loading, loggingOut, handleLogout };
+  return { user, loading, handleLogout };
 }
