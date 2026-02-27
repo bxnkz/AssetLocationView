@@ -17,7 +17,6 @@ export function Auth() {
 
       if (token && savedUser) {
         setUser(JSON.parse(savedUser));
-        // ตั้งค่า Token ให้ Axios อัตโนมัติสำหรับการดึงข้อมูลครั้งต่อๆ ไป
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       } else {
         setUser(null);
@@ -32,7 +31,7 @@ export function Auth() {
     localStorage.removeItem("user");
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
-    window.location.reload(); // รีโหลดเพื่อให้ App.tsx แสดงหน้า Login
+    window.location.reload();
   };
 
   return { user, loading, handleLogout };

@@ -1,146 +1,121 @@
 import { useState } from "react";
+import { Stage, Layer, Rect, Text, Group } from "react-konva";
+
 import Navbar from "./components/Navbar";
-import FloorImage from "./components/FloorImage";
-import AssetImage from "./components/AssetImage";
-import Sidebar from "./components/Sidebar";
-import FloatingButton from "./components/FloatingButton";
-import { Stage, Layer, Text } from "react-konva";
 import { Auth } from "./hooks/Auth";
-import AssetManager, { ApiProduct, AssetType } from "./components/AssetManager";
-import AssetPopup from "./components/AssetPopup";
-import axios from "axios";
-import LoginPage from "./pages/LoginPage"; // Import หน้า Login เข้ามา
+import FloatingButton from "./components/FloatingButton";
+import AutoGen from "./components/AutoGen";
+
+import { generateLayout } from "./layout/algorithms/SmartLayoutGen";
+import LoginPage from "./pages/LoginPage";
+
+interface DeskAsset {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 function App() {
+  // ✅ เรียก Auth ที่นี่
   const { user, loading, handleLogout } = Auth();
 
-  const [selectedFloor, setSelectedFloor] = useState("FL1");
-  const [selectedSite, setSelectedSite] = useState("B4");
-  const [selectedDepartment, setSelectedDepartment] = useState("IT");
-  const [placedAssets, setPlacedAssets] = useState<AssetType[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [placedAssets, setPlacedAssets] = useState<DeskAsset[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [roomRect, setRoomRect] = useState({ width: 0, height: 0 });
 
-  const [selectedAsset, setSelectedAsset] = useState<AssetType | null>(null);
-  const [assetDetails, setAssetDetails] = useState<ApiProduct | null>(null);
-  const [isPopupLoading, setIsPopupLoading] = useState(false);
+  const STAGE_WIDTH = 1100;
+  const STAGE_HEIGHT = 700;
 
-  const handleAssetClick = async (asset: AssetType) => {
-    if(!asset.assetCode) return;
-    setSelectedAsset(asset);
-    setIsPopupLoading(true);
-    setAssetDetails(null);
 
-    try{
-      const res = await axios.get<ApiProduct>(
-        `https://ratiphong.tips.co.th:7112/api/Product?assetCode=${encodeURIComponent(asset.assetCode)}`
-      );
-      setAssetDetails(res.data);
-    }catch(error){
-      console.error("Error fetching asset details:", error);
-    }finally{
-      setIsPopupLoading(false);
-    }
+  if (loading) {
+    return <div className="p-4">Loading...</div>;
+  }
+
+  if (!user){
+    return <LoginPage/>
+  }
+
+  const handleGenerateLayout = (config: any) => {
+    const scale = 50;
+
+    const roomPixelWidth = config.roomWidth * scale;
+    const roomPixelHeight = config.roomHeight * scale;
+
+    setRoomRect({
+      width: roomPixelWidth,
+      height: roomPixelHeight,
+    });
+
+    const startX = (STAGE_WIDTH - roomPixelWidth) / 2;
+    const startY = (STAGE_HEIGHT - roomPixelHeight) / 2;
+
+    const desks = generateLayout(
+      config.algorithm,
+      config,
+      startX,
+      startY,
+      scale
+    );
+
+    setPlacedAssets(desks);
+    setIsModalOpen(false);
   };
 
-  const handleClosePopup = () =>{
-    setSelectedAsset(null);
-    setAssetDetails(null);
-  }
-
-  // ส่วนของการเช็คสิทธิ์การเข้าถึง
-  if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  
-  // 🟢 จุดสำคัญ: ถ้าไม่มี user ให้แสดงหน้า LoginPage ทันที
-  if (!user) {
-    return <LoginPage />;
-  }
-
-  // 🔵 ถ้ามี user (Login แล้ว) ให้แสดงหน้า Map ปกติ
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar
-        name={user.name} // ใช้ชื่อจาก Database
-        onLogout={handleLogout}
-        selectedFloor={selectedFloor}
-        onFloorChange={setSelectedFloor}
-        selectedSite={selectedSite}
-        onSiteChange={setSelectedSite}
-        selectedDepartment={selectedDepartment}
-        onDepartmentChange={setSelectedDepartment}
-      />
+    <div className="min-h-screen bg-gray-100">
+      {user && (
+        <Navbar
+          name={user.name}
+          onLogout={handleLogout}
+        />
+      )}
 
-      <AssetManager
-        selectedSite={selectedSite}
-        selectedFloor={selectedFloor}
-        selectedDepartment={selectedDepartment}
-        userName={user.name}
-        placedAssets={placedAssets}
-        setPlacedAssets={setPlacedAssets}
-      >
-        {({
-          printerAssets,
-          upsAssets,
-          switchAssets,
-          computerAssets,
-          notebookAssets,
-          phoneAssets,
-          handleDragEnd,
-          handleDeleteAsset,
-          handleAddAsset,
-        }) => (
-          <main className="flex-1 p-4 flex justify-center items-center relative overflow-auto">
-            <Stage width={1400} height={900} onClick={(e) => {
-              if(e.target === e.target.getStage()) handleClosePopup();
-            }}>
-              <Layer>
-                <FloorImage
-                  selectedSite={selectedSite}
-                  selectedFloor={selectedFloor}
-                  selectedDepartment={selectedDepartment}
+      <div className="flex justify-center p-4">
+        <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
+          <Layer>
+            {roomRect.width > 0 && (
+              <Rect
+                x={(STAGE_WIDTH - roomRect.width) / 2}
+                y={(STAGE_HEIGHT - roomRect.height) / 2}
+                width={roomRect.width}
+                height={roomRect.height}
+                stroke="#374151"
+                strokeWidth={3}
+                dash={[8, 4]}
+              />
+            )}
+
+            {placedAssets.map((desk) => (
+              <Group key={desk.id} x={desk.x} y={desk.y} draggable>
+                <Rect
+                  width={desk.width}
+                  height={desk.height}
+                  fill="#3b82f6"
+                  cornerRadius={4}
                 />
-                {placedAssets.map((asset) => (
-                  <AssetImage
-                    key={asset.id}
-                    id={asset.id}
-                    type={asset.type}
-                    name={asset.name}
-                    assetCode={asset.assetCode}
-                    x={asset.x}
-                    y={asset.y}
-                    onDragEnd={handleDragEnd}
-                    onDelete={() => handleDeleteAsset(asset)}
-                    onClick={() => handleAssetClick(asset)}
-                  />
-                ))}
-                {isPopupLoading && selectedAsset && (
-                  <Text text="Loading..." x={selectedAsset.x + 40} y={selectedAsset.y} fontSize={14} fill="black" />
-                )}
-                {!isPopupLoading && selectedAsset && assetDetails && (
-                  <AssetPopup
-                    asset={selectedAsset}
-                    details={assetDetails}
-                    onClose={handleClosePopup}
-                  />
-                )}
-              </Layer>
-            </Stage>
-          
-            <Sidebar
-              open={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-              printerAssets={printerAssets}
-              upsAssets={upsAssets}
-              switchAssets={switchAssets}
-              computerAssets={computerAssets}
-              notebookAssets={notebookAssets}
-              phoneAssets={phoneAssets}
-              onAddAsset={handleAddAsset}
-            />
-          </main>
-        )}
-      </AssetManager>
+                <Text
+                  text={desk.name}
+                  fill="white"
+                  width={desk.width}
+                  align="center"
+                  y={desk.height / 2 - 6}
+                />
+              </Group>
+            ))}
+          </Layer>
+        </Stage>
+      </div>
 
-      <FloatingButton onClick={() => setSidebarOpen(true)} />
+      <FloatingButton onClick={() => setIsModalOpen(true)} />
+
+      <AutoGen
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onGenerate={handleGenerateLayout}
+      />
     </div>
   );
 }
