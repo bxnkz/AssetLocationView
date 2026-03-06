@@ -5,9 +5,9 @@ import Navbar from "./components/Navbar";
 import { Auth } from "./hooks/Auth";
 import FloatingButton from "./components/FloatingButton";
 import AutoGen from "./components/AutoGen";
+import LoginPage from "./pages/LoginPage";
 
 import { generateLayout } from "./layout/algorithms/SmartLayoutGen";
-import LoginPage from "./pages/LoginPage";
 
 interface DeskAsset {
   id: string;
@@ -19,26 +19,22 @@ interface DeskAsset {
 }
 
 function App() {
-  // ✅ เรียก Auth ที่นี่
   const { user, loading, handleLogout } = Auth();
 
-  const [placedAssets, setPlacedAssets] = useState<DeskAsset[]>([]);
+  const [layouts, setLayouts] = useState<DeskAsset[][]>([]);
+  const [currentLayoutIndex, setCurrentLayoutIndex] = useState(0);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [roomRect, setRoomRect] = useState({ width: 0, height: 0 });
 
   const STAGE_WIDTH = 1100;
   const STAGE_HEIGHT = 700;
 
+  if (loading) return <div className="p-4">Loading...</div>;
+  if (!user) return <LoginPage />;
 
-  if (loading) {
-    return <div className="p-4">Loading...</div>;
-  }
-
-  if (!user){
-    return <LoginPage/>
-  }
-
-  const handleGenerateLayout = (config: any) => {
+  /** 🔹 Generate ทุก layout */
+  const handleGenerateAllLayouts = (config: any) => {
     const scale = 50;
 
     const roomPixelWidth = config.roomWidth * scale;
@@ -52,30 +48,36 @@ function App() {
     const startX = (STAGE_WIDTH - roomPixelWidth) / 2;
     const startY = (STAGE_HEIGHT - roomPixelHeight) / 2;
 
-    const desks = generateLayout(
-      config.algorithm,
-      config,
-      startX,
-      startY,
-      scale
+    const algorithms: ("grid" | "row-pattern")[] = [
+      "grid",
+      "row-pattern",
+    ];
+
+    const generatedLayouts: DeskAsset[][] = algorithms.map((algo, index) =>
+      generateLayout(
+        algo,
+        { ...config, algorithm: algo },
+        startX,
+        startY,
+        scale
+      )
     );
 
-    setPlacedAssets(desks);
+    setLayouts(generatedLayouts);
+    setCurrentLayoutIndex(0);
     setIsModalOpen(false);
   };
 
+  const currentLayout = layouts[currentLayoutIndex] || [];
+
   return (
     <div className="min-h-screen bg-gray-100">
-      {user && (
-        <Navbar
-          name={user.name}
-          onLogout={handleLogout}
-        />
-      )}
+      <Navbar name={user.name} onLogout={handleLogout} />
 
       <div className="flex justify-center p-4">
         <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
           <Layer>
+            {/* ห้อง */}
             {roomRect.width > 0 && (
               <Rect
                 x={(STAGE_WIDTH - roomRect.width) / 2}
@@ -88,7 +90,8 @@ function App() {
               />
             )}
 
-            {placedAssets.map((desk) => (
+            {/* โต๊ะ */}
+            {currentLayout.map((desk) => (
               <Group key={desk.id} x={desk.x} y={desk.y} draggable>
                 <Rect
                   width={desk.width}
@@ -109,12 +112,43 @@ function App() {
         </Stage>
       </div>
 
+      {/* ปุ่มเลื่อนเลือก layout */}
+      {layouts.length > 1 && (
+        <div className="flex justify-center gap-4 pb-4">
+          <button
+            className="px-4 py-2 border rounded"
+            disabled={currentLayoutIndex === 0}
+            onClick={() =>
+              setCurrentLayoutIndex((prev) => Math.max(prev - 1, 0))
+            }
+          >
+            ◀ Previous
+          </button>
+
+          <span className="font-medium">
+            Layout {currentLayoutIndex + 1} / {layouts.length}
+          </span>
+
+          <button
+            className="px-4 py-2 border rounded"
+            disabled={currentLayoutIndex === layouts.length - 1}
+            onClick={() =>
+              setCurrentLayoutIndex((prev) =>
+                Math.min(prev + 1, layouts.length - 1)
+              )
+            }
+          >
+            Next ▶
+          </button>
+        </div>
+      )}
+
       <FloatingButton onClick={() => setIsModalOpen(true)} />
 
       <AutoGen
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onGenerate={handleGenerateLayout}
+        onGenerateAll={handleGenerateAllLayouts}
       />
     </div>
   );
