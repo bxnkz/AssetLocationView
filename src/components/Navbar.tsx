@@ -4,6 +4,7 @@ import "../index.css";
 interface NavBarProps {
   name: string;
   onLogout: () => void;
+  onRoomChange: (building: string, floor: string, room: string) => void;
 }
 
 const buildingData: {
@@ -29,10 +30,10 @@ const buildingData: {
   },
 };
 
-const Navbar: React.FC<NavBarProps> = ({ name, onLogout }) => {
-  const [building, setBuilding] = useState("");
-  const [floor, setFloor] = useState("");
-  const [room, setRoom] = useState("");
+const Navbar: React.FC<NavBarProps> = ({ name, onLogout, onRoomChange }) => {
+  const [building, setBuilding] = useState("17");
+  const [floor, setFloor] = useState("1");
+  const [room, setRoom] = useState("17101");
 
   const floors = building ? Object.keys(buildingData[building].floors) : [];
   const rooms =
@@ -44,7 +45,7 @@ const Navbar: React.FC<NavBarProps> = ({ name, onLogout }) => {
 
   return (
     <nav className="relative flex items-center bg-[#006B67] text-white px-5 py-4 shadow-md font-medium">
-      {/* ===== LEFT : ICON ===== */}
+
       <div className="flex items-center gap-2 min-w-[120px]">
         <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center">
           🏢
@@ -52,17 +53,20 @@ const Navbar: React.FC<NavBarProps> = ({ name, onLogout }) => {
         <span className="hidden md:block">My App</span>
       </div>
 
-      {/* ===== CENTER : DROPDOWN ===== */}
       <div className="absolute left-1/2 -translate-x-1/2">
         <div className="flex gap-3 items-center bg-[#006B67] border border-white/30 px-4 py-2 rounded-lg shadow">
-          {/* ตึก */}
+
+          {/* Building */}
           <select
             className={selectClass}
             value={building}
             onChange={(e) => {
-              setBuilding(e.target.value);
+              const newBuilding = e.target.value;
+              setBuilding(newBuilding);
               setFloor("");
               setRoom("");
+
+              onRoomChange(newBuilding, "", "");
             }}
           >
             <option value="">เลือกตึก</option>
@@ -73,14 +77,17 @@ const Navbar: React.FC<NavBarProps> = ({ name, onLogout }) => {
             ))}
           </select>
 
-          {/* ชั้น */}
+          {/* Floor */}
           <select
             className={selectClass}
             value={floor}
             disabled={!building}
             onChange={(e) => {
-              setFloor(e.target.value);
+              const newFloor = e.target.value;
+              setFloor(newFloor);
               setRoom("");
+
+              onRoomChange(building, newFloor, "");
             }}
           >
             <option value="">เลือกชั้น</option>
@@ -91,12 +98,17 @@ const Navbar: React.FC<NavBarProps> = ({ name, onLogout }) => {
             ))}
           </select>
 
-          {/* ห้อง */}
+          {/* Room */}
           <select
             className={selectClass}
             value={room}
             disabled={!floor}
-            onChange={(e) => setRoom(e.target.value)}
+            onChange={(e) => {
+              const newRoom = e.target.value;
+              setRoom(newRoom);
+
+              onRoomChange(building, floor, newRoom);
+            }}
           >
             <option value="">เลือกห้อง</option>
             {rooms.map((r) => (
@@ -105,21 +117,22 @@ const Navbar: React.FC<NavBarProps> = ({ name, onLogout }) => {
               </option>
             ))}
           </select>
+
         </div>
       </div>
 
-      {/* ===== RIGHT : USER ===== */}
       <div className="ml-auto flex items-center gap-4">
         <span className="hidden sm:block">Welcome, {name}</span>
+
         <button
           onClick={onLogout}
           title="Logout"
-          className="w-9 h-9 flex items-center justify-center
-                     hover:bg-white/20 rounded-full transition text-lg"
+          className="w-9 h-9 flex items-center justify-center hover:bg-white/20 rounded-full transition text-lg"
         >
           <i className="bi bi-power"></i>
         </button>
       </div>
+
     </nav>
   );
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Stage, Layer, Rect, Text, Group } from "react-konva";
 
 import Navbar from "./components/Navbar";
@@ -24,6 +24,10 @@ function App() {
   const [layouts, setLayouts] = useState<DeskAsset[][]>([]);
   const [currentLayoutIndex, setCurrentLayoutIndex] = useState(0);
 
+  const [building, setBuilding] = useState("");
+  const [floor, setFloor] = useState("");
+  const [room, setRoom] = useState("");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [roomRect, setRoomRect] = useState({ width: 0, height: 0 });
 
@@ -33,7 +37,6 @@ function App() {
   if (loading) return <div className="p-4">Loading...</div>;
   if (!user) return <LoginPage />;
 
-  /** 🔹 Generate ทุก layout */
   const handleGenerateAllLayouts = (config: any) => {
     const scale = 50;
 
@@ -53,7 +56,7 @@ function App() {
       "row-pattern",
     ];
 
-    const generatedLayouts: DeskAsset[][] = algorithms.map((algo, index) =>
+    const generatedLayouts: DeskAsset[][] = algorithms.map((algo) =>
       generateLayout(
         algo,
         { ...config, algorithm: algo },
@@ -70,14 +73,92 @@ function App() {
 
   const currentLayout = layouts[currentLayoutIndex] || [];
 
+  /** SAVE LAYOUT */
+  const saveLayout = async () => {
+    if (!building || !floor || !room) {
+      alert("กรุณาเลือก ตึก / ชั้น / ห้อง");
+      return;
+    }
+
+    try {
+      await fetch("http://localhost:5000/api/layout/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          building,
+          floor,
+          room,
+          desks: currentLayout,
+          roomWidth: roomRect.width,
+          roomHeight: roomRect.height,
+        }),
+      });
+
+      alert("Save Layout สำเร็จ");
+    } catch (err) {
+      console.error(err);
+      alert("Save ไม่สำเร็จ");
+    }
+  };
+
+  const loadLayout = async (building: string, floor: string, room: string) => {
+    if (!building || !floor || !room) {
+      setLayouts([]);
+      setRoomRect({ width: 0, height: 0 });
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/layout/${building}/${floor}/${room}`
+      );
+
+      const data = await res.json();
+
+      if (!data || !data.desks) {
+        // ถ้าห้องนี้ยังไม่มี layout
+        setLayouts([]);
+        setRoomRect({ width: 0, height: 0 });
+        return;
+      }
+
+      setLayouts([data.desks]);
+      setCurrentLayoutIndex(0);
+
+      setRoomRect({
+        width: data.roomWidth,
+        height: data.roomHeight,
+      });
+
+    } catch (err) {
+      console.error("Load layout error", err);
+
+      setLayouts([]);
+      setRoomRect({ width: 0, height: 0 });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar name={user.name} onLogout={handleLogout} />
 
-      <div className="flex justify-center p-4">
+      <Navbar
+        name={user.name}
+        onLogout={handleLogout}
+        onRoomChange={(b, f, r) => {
+          setBuilding(b);
+          setFloor(f);
+          setRoom(r);
+
+          loadLayout(b, f, r);
+        }}
+      />
+
+      <div className="flex justify-center items-start pt-2">
         <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
           <Layer>
-            {/* ห้อง */}
+
             {roomRect.width > 0 && (
               <Rect
                 x={(STAGE_WIDTH - roomRect.width) / 2}
@@ -86,11 +167,9 @@ function App() {
                 height={roomRect.height}
                 stroke="#374151"
                 strokeWidth={3}
-                dash={[8, 4]}
               />
             )}
 
-            {/* โต๊ะ */}
             {currentLayout.map((desk) => (
               <Group key={desk.id} x={desk.x} y={desk.y} draggable>
                 <Rect
@@ -108,13 +187,14 @@ function App() {
                 />
               </Group>
             ))}
+
           </Layer>
         </Stage>
       </div>
 
-      {/* ปุ่มเลื่อนเลือก layout */}
       {layouts.length > 1 && (
         <div className="flex justify-center gap-4 pb-4">
+
           <button
             className="px-4 py-2 border rounded"
             disabled={currentLayoutIndex === 0}
@@ -122,7 +202,7 @@ function App() {
               setCurrentLayoutIndex((prev) => Math.max(prev - 1, 0))
             }
           >
-            ◀ Previous
+            <i className="bi bi-arrow-left"></i>
           </button>
 
           <span className="font-medium">
@@ -138,7 +218,33 @@ function App() {
               )
             }
           >
-            Next ▶
+            <i className="bi bi-arrow-right"></i>
+          </button>
+
+        </div>
+      )}
+
+      {/* SAVE BUTTON */}
+      {layouts.length > 0 && (
+        <div className="flex justify-center pb-6">
+          <button
+            onClick={saveLayout}
+            className="
+        flex items-center gap-2
+        bg-gradient-to-r from-green-500 to-emerald-600
+        text-white
+        px-6 py-3
+        rounded-xl
+        shadow-lg
+        hover:shadow-xl
+        hover:scale-105
+        transition
+        duration-200
+        font-medium
+      "
+          >
+            <i className="bi bi-save text-lg"></i>
+            Save Layout
           </button>
         </div>
       )}
@@ -150,6 +256,7 @@ function App() {
         onClose={() => setIsModalOpen(false)}
         onGenerateAll={handleGenerateAllLayouts}
       />
+
     </div>
   );
 }
