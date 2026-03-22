@@ -1,2 +1,8 @@
 @import "tailwindcss";
 @import "bootstrap-icons/font/bootstrap-icons.css";
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap');
+@layer base {
+  html, body, #root {
+    font-family: 'Kanit', sans-serif;
+  }
+}

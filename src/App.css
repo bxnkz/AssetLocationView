@@ -1,1 +1,7 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap');
+@layer base {
+  body {
+    font-family: 'Kanit', sans-serif;
+  }
+}

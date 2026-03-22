@@ -4,6 +4,7 @@ import axios from "axios";
 interface User {
   name: string;
   username: string;
+  role: "admin" | "teacher";
 }
 
 export function Auth() {
@@ -11,19 +12,15 @@ export function Auth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("token");
-      const savedUser = localStorage.getItem("user");
-
-      if (token && savedUser) {
-        setUser(JSON.parse(savedUser));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    };
-    checkAuth();
+    const token = localStorage.getItem("token");
+    const savedUser = localStorage.getItem("user");
+    if (token && savedUser) {
+      setUser(JSON.parse(savedUser));
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
   }, []);
 
   const handleLogout = () => {
@@ -31,7 +28,8 @@ export function Auth() {
     localStorage.removeItem("user");
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
-    window.location.reload();
+    // redirect ไป / แทน reload เพื่อป้องกันหน้าขาวเมื่ออยู่ใน sub-route
+    window.location.href = "/";
   };
 
   return { user, loading, handleLogout };
