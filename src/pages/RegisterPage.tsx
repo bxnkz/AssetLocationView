@@ -67,7 +67,7 @@ export default function RegisterPage() {
               {[
                 { label: "ชื่อที่ใช้ในระบบ", type: "text", value: name, set: setName, placeholder: "กรอกชื่อที่ใช้ในระบบ" },
                 { label: "ชื่อผู้ใช้", type: "text", value: username, set: setUsername, placeholder: "กรอกชื่อผู้ใช้" },
-                { label: "Email", type: "email", value: email, set: setEmail, placeholder: "กรอก Email" },
+                { label: "อีเมล", type: "email", value: email, set: setEmail, placeholder: "กรอกอีเมล" },
                 { label: "รหัสผ่าน", type: "password", value: password, set: setPassword, placeholder: "กรอกรหัสผ่าน" },
               ].map(({ label, type, value, set, placeholder }) => (
                 <div key={label}>

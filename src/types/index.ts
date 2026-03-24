@@ -3,7 +3,7 @@ export const DEFAULT_SPACING = {
   spacingY: 0.9,              // ระยะห่างระหว่างแถว (m) — วัดจากสถานที่จริง
   MIN_SPACING_X: 0.5,
   MIN_SPACING_Y: 0.9,
-  blackboardDepth: 3.6,       // พื้นที่หน้ากระดาน classroom default (m)
+  blackboardDepth: 1.5,       // พื้นที่หน้ากระดาน classroom default (m)
   MIN_BLACKBOARD_DEPTH: 1.5,  // ขั้นต่ำบังคับ classroom
   examBlackboardDepth: 0,     // พื้นที่หน้ากระดาน exam default (m)
   MIN_EXAM_BLACKBOARD_DEPTH: 0, // ห้องสอบไม่บังคับขั้นต่ำ

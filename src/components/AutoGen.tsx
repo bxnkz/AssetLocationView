@@ -31,12 +31,28 @@ const EXAM_DEFAULTS: LayoutConfig = {
 const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
   const [config, setConfig] = useState<LayoutConfig>(CLASSROOM_DEFAULTS);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [capacityWarning, setCapacityWarning] = useState<string | null>(null);
 
-  // ล้าง warning เมื่อเปิด modal
+  // ล้าง state เมื่อเปิด modal
   useEffect(() => {
-    if (isOpen) setCapacityWarning(null);
+    if (isOpen) { /* reset ถ้าจำเป็น */ }
   }, [isOpen]);
+
+  // อัปเดต totalDesks เป็น maxCap อัตโนมัติ เมื่อพารามิเตอร์ที่เกี่ยวข้องเปลี่ยน
+  useEffect(() => {
+    const { roomWidth, roomHeight, deskWidth, deskHeight } = config;
+    if (!roomWidth || !roomHeight || !deskWidth || !deskHeight) return;
+    const cap = config.layoutMode === "exam"
+      ? calcMaxCapacityExam(config)
+      : calcMaxCapacity(config);
+    if (cap > 0) {
+      setConfig(prev => ({ ...prev, totalDesks: cap }));
+    }
+  }, [
+    config.roomWidth, config.roomHeight,
+    config.deskWidth, config.deskHeight,
+    config.spacingX, config.spacingY,
+    config.blackboardDepth, config.layoutMode,
+  ]);
 
   // เมื่อเปลี่ยน mode — อัปเดต blackboardDepth ให้ตรง default ของ mode นั้น
   const handleModeChange = (mode: "classroom" | "exam") => {
@@ -47,14 +63,12 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
         ? DEFAULT_SPACING.examBlackboardDepth
         : DEFAULT_SPACING.blackboardDepth,
     }));
-    setCapacityWarning(null);
   };
 
   if (!isOpen) return null;
 
   const set = (key: keyof LayoutConfig, value: number | string) => {
     setConfig(prev => ({ ...prev, [key]: value }));
-    setCapacityWarning(null);
   };
 
   const handleChange = (key: keyof LayoutConfig, raw: string) => {
@@ -73,22 +87,11 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
   };
 
   const handleGenerate = () => {
-    const { roomWidth, roomHeight, deskWidth, deskHeight, totalDesks, layoutMode } = config;
+    const { roomWidth, roomHeight, deskWidth, deskHeight, totalDesks } = config;
     if (!roomWidth || !roomHeight || !deskWidth || !deskHeight || !totalDesks) {
       alert("กรุณากรอกข้อมูลให้ครบ"); return;
     }
     if (totalDesks <= 0) { alert("จำนวนโต๊ะต้องมากกว่า 0"); return; }
-
-    const maxCap = layoutMode === "exam"
-      ? calcMaxCapacityExam(config)
-      : calcMaxCapacity(config);
-
-    if (totalDesks > maxCap) {
-      setCapacityWarning(
-        `ห้องนี้จุโต๊ะได้สูงสุด ${maxCap} ตัว (${layoutMode === "exam" ? "ห้องสอบ" : "ห้องเรียน"}) — คุณกรอก ${totalDesks}`
-      );
-      return;
-    }
     onGenerate(config);
   };
 
@@ -107,7 +110,7 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
       <div className="bg-white p-5 rounded-2xl w-[380px] shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
 
         <div className="flex items-center justify-between">
-          <h2 className="font-bold text-lg text-gray-800">Generate Layouts</h2>
+          <h2 className="font-bold text-lg text-gray-800">สร้างแผนผังอัตโนมัติ</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <i className="bi bi-x-lg"></i>
           </button>
@@ -145,27 +148,40 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
           </div>
         ))}
 
-        {/* จำนวนโต๊ะ — step="1" เพราะเป็นจำนวนเต็ม */}
+        {/* จำนวนโต๊ะ — step="1" เพราะเป็นจำนวนเต็ม, max = ความจุสูงสุด */}
         <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">จำนวนโต๊ะที่ต้องการวาง</label>
+          <label className="text-sm font-medium text-gray-700">
+            จำนวนโต๊ะที่ต้องการวาง
+            {maxCap !== null && (
+              <span className="text-xs text-gray-400 ml-1">(สูงสุด {maxCap} ตัว)</span>
+            )}
+          </label>
           <input type="number" min="1" step="1"
+            max={maxCap ?? undefined}
             value={config.totalDesks ?? ""}
             onChange={e => {
               const v = parseInt(e.target.value);
-              if (!isNaN(v) && v > 0) set("totalDesks", v);
+              if (!isNaN(v) && v >= 1) {
+                set("totalDesks", maxCap !== null ? Math.min(v, maxCap) : v);
+              }
             }}
             className={inputClass} />
           {maxCap !== null && (
-            <p className="text-xs text-blue-500">ความจุสูงสุด: <span className="font-bold">{maxCap} ตัว</span></p>
+            <p className="text-xs text-[#006B67]">
+              ความจุสูงสุด: <span className="font-bold">{maxCap} ตัว</span>
+              {config.totalDesks < maxCap && (
+                <button
+                  type="button"
+                  onClick={() => set("totalDesks", maxCap)}
+                  className="ml-2 underline hover:text-[#005a56]"
+                >
+                  ใช้ค่าสูงสุด
+                </button>
+              )}
+            </p>
           )}
         </div>
 
-        {/* Capacity warning */}
-        {capacityWarning && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
-            ⚠️ {capacityWarning}
-          </div>
-        )}
 
         {/* Advanced toggle */}
         <button onClick={() => setShowAdvanced(!showAdvanced)}
@@ -182,7 +198,7 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">
                   ระยะห่างทางคอลัมน์ (เมตร)
-                  <span className="text-xs text-gray-400 ml-1">ขั้นต่ำ {DEFAULT_SPACING.MIN_SPACING_X}</span>
+                  <span className="text-xs text-gray-400 ml-1">ต่ำสุด {DEFAULT_SPACING.MIN_SPACING_X}</span>
                 </label>
                 <input type="number" min={DEFAULT_SPACING.MIN_SPACING_X} step="0.1"
                   value={config.spacingX}
@@ -192,7 +208,7 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">
                   ระยะห่างระหว่างแถว (เมตร)
-                  <span className="text-xs text-gray-400 ml-1">ขั้นต่ำ {DEFAULT_SPACING.MIN_SPACING_Y}</span>
+                  <span className="text-xs text-gray-400 ml-1">ต่ำสุด {DEFAULT_SPACING.MIN_SPACING_Y}</span>
                 </label>
                 <input type="number" min={DEFAULT_SPACING.MIN_SPACING_Y} step="0.1"
                   value={config.spacingY}
@@ -201,48 +217,76 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
               </div>
             </div>
 
-            {config.layoutMode === "classroom" && (
-              <div className="grid grid-cols-2 gap-3">
+            {config.layoutMode === "classroom" && (() => {
+              const { roomWidth, deskWidth, spacingX, totalDesks } = config;
+
+              /**
+               * หา maxCols จริงที่ generator จะผ่านได้ โดยต้องผ่าน 3 เงื่อนไขพร้อมกัน:
+               * 1. numGroups * deskWidth + (numGroups-1) * spacingX <= roomWidth  (พื้นที่ห้อง)
+               * 2. floor(avW / numGroups / deskWidth) >= 2  (แต่ละ group จุได้ >= 2 โต๊ะ)
+               * 3. floor(totalDesks / numGroups) >= 2  (โต๊ะเฉลี่ยต่อ group >= 2)
+               */
+              let maxCols = 1;
+              if (roomWidth && deskWidth && spacingX && totalDesks) {
+                for (let g = MAX_COLUMNS; g >= 2; g--) {
+                  const walkwayW = (g - 1) * spacingX;
+                  const avW = roomWidth - walkwayW;
+                  if (avW <= 0) continue;
+                  if (g * deskWidth + walkwayW > roomWidth) continue;           // เงื่อนไข 1
+                  if (Math.floor(avW / g / deskWidth) < 2) continue;            // เงื่อนไข 2
+                  if (Math.floor(totalDesks / g) < 2) continue;                 // เงื่อนไข 3
+                  maxCols = g;
+                  break;
+                }
+              }
+              const maxWalkways = Math.max(1, maxCols - 1);
+
+              // clamp columns ที่เลือกไว้ถ้าเกิน max ใหม่
+              const walkwaysVal = config.columns !== undefined
+                ? Math.min(config.columns - 1, maxWalkways)
+                : undefined;
+
+              return (
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">
-                    คอลัมน์ (สูงสุด {MAX_COLUMNS})
+                    จำนวนทางเดิน
+                    <span className="text-xs text-gray-400 ml-1">(สูงสุด {maxWalkways})</span>
                   </label>
-                  <input type="number" min="1" max={MAX_COLUMNS} step="1"
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxWalkways}
+                    step="1"
                     placeholder="อัตโนมัติ"
-                    value={config.columns ?? ""}
+                    value={walkwaysVal ?? ""}
                     onChange={e => {
                       const v = parseInt(e.target.value);
                       setConfig(prev => ({
                         ...prev,
-                        columns: isNaN(v) || e.target.value === "" ? undefined : Math.min(Math.max(v, 1), MAX_COLUMNS),
+                        columns: isNaN(v) || e.target.value === ""
+                          ? undefined
+                          : Math.min(Math.max(v + 1, 2), maxCols),
+                        rows: undefined,
                       }));
                     }}
-                    className={inputClass} />
+                    className={inputClass}
+                  />
+                  <p className="text-xs text-gray-400">
+                    {walkwaysVal !== undefined
+                      ? `${walkwaysVal} ทางเดิน → ${walkwaysVal + 1} คอลัมน์`
+                      : `อัตโนมัติ: ลองทุกรูปแบบ 1–${maxWalkways} ทางเดิน`}
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">แถว</label>
-                  <input type="number" min="1" step="1"
-                    placeholder="อัตโนมัติ"
-                    value={config.rows ?? ""}
-                    onChange={e => {
-                      const v = parseInt(e.target.value);
-                      setConfig(prev => ({
-                        ...prev,
-                        rows: isNaN(v) || e.target.value === "" ? undefined : Math.max(v, 1),
-                      }));
-                    }}
-                    className={inputClass} />
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Blackboard depth — แยก min ตาม mode */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">
-                พื้นที่หน้ากระดาน (เมตร)
+                พื้นที่หน้าห้องสำหรับเดิน (เมตร)
                 {config.layoutMode === "classroom"
-                  ? <span className="text-xs text-gray-400 ml-1">ขั้นต่ำ {DEFAULT_SPACING.MIN_BLACKBOARD_DEPTH}m</span>
-                  : <span className="text-xs text-gray-400 ml-1">ห้องสอบ — ไม่บังคับขั้นต่ำ</span>
+                  ? <span className="text-xs text-gray-400 ml-1">ต่ำสุด {DEFAULT_SPACING.MIN_BLACKBOARD_DEPTH}m</span>
+                  : <span className="text-xs text-gray-400 ml-1">ต่ำสุด 0</span>
                 }
               </label>
               <input type="number"
@@ -261,7 +305,7 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
             className="flex-1 border py-2 rounded-lg hover:bg-gray-50">ยกเลิก</button>
           <button type="button" onClick={handleGenerate}
             className="flex-1 bg-[#006B67] text-white py-2 rounded-lg hover:bg-[#005a56]">
-            Generate Layouts
+            สร้างแผนผังอัตโนมัติ
           </button>
         </div>
       </div>

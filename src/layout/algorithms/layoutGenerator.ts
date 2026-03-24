@@ -17,16 +17,20 @@ export interface LayoutResult {
 
 export type { LayoutConfig };
 
-/** คำนวณความจุสูงสุดของห้อง — classroom mode */
+/** คำนวณความจุสูงสุดของห้อง — classroom mode
+ *  บังคับ: อย่างน้อย 2 groups (1 ทางเดิน) และแต่ละ group ต้องมี >= 2 โต๊ะ */
 export function calcMaxCapacity(config: Pick<LayoutConfig, "roomWidth"|"roomHeight"|"deskWidth"|"deskHeight"|"spacingX"|"spacingY"|"blackboardDepth">): number {
   const usableH = config.roomHeight - (config.blackboardDepth ?? DEFAULT_SPACING.blackboardDepth);
   if (usableH <= 0) return 0;
   let max = 0;
-  for (let g = 1; g <= MAX_COLUMNS; g++) {
-    const avW = config.roomWidth - (g - 1) * config.spacingX;
+  for (let g = 2; g <= MAX_COLUMNS; g++) {
+    const walkwayW = (g - 1) * config.spacingX;
+    const avW = config.roomWidth - walkwayW;
     if (avW <= 0) continue;
-    const perRow = Math.floor(avW / config.deskWidth);
-    if (perRow <= 0) continue;
+    // โต๊ะต่อ group = avW หารด้วย g แล้ว floor (แบ่งเท่าๆ กัน)
+    const desksPerGroup = Math.floor(avW / g / config.deskWidth);
+    if (desksPerGroup < 2) continue;   // ห้ามมี group ที่มีโต๊ะ < 2
+    const perRow = desksPerGroup * g;
     const maxRows = Math.floor((usableH + config.spacingY) / (config.deskHeight + config.spacingY));
     max = Math.max(max, perRow * maxRows);
   }
@@ -35,7 +39,7 @@ export function calcMaxCapacity(config: Pick<LayoutConfig, "roomWidth"|"roomHeig
 
 /** คำนวณความจุสูงสุดของห้อง — exam mode */
 export function calcMaxCapacityExam(config: Pick<LayoutConfig, "roomWidth"|"roomHeight"|"deskWidth"|"deskHeight"|"spacingX"|"spacingY"|"blackboardDepth">): number {
-  const usableH = config.roomHeight - (config.blackboardDepth ?? DEFAULT_SPACING.blackboardDepth);
+  const usableH = config.roomHeight - (config.blackboardDepth ?? DEFAULT_SPACING.examBlackboardDepth);
   if (usableH <= 0) return 0;
   const perRow = Math.floor((config.roomWidth + config.spacingX) / (config.deskWidth + config.spacingX));
   if (perRow <= 0) return 0;
@@ -64,7 +68,7 @@ function classroomLayouts(config: LayoutConfig): LayoutResult[] {
   const results: LayoutResult[] = [];
   const seen = new Set<string>();
 
-  const minGroups = config.columns ?? 1;
+  const minGroups = config.columns ?? 2;
   const maxGroups = config.columns ?? MAX_COLUMNS;
 
   for (let numGroups = minGroups; numGroups <= maxGroups; numGroups++) {
@@ -73,29 +77,42 @@ function classroomLayouts(config: LayoutConfig): LayoutResult[] {
     if (avW <= 0) continue;
     if (numGroups * deskWidth + walkwayW > roomWidth) continue;
 
+    // แต่ละ group ต้องจุได้อย่างน้อย 2 โต๊ะ (ตรวจจากพื้นที่เฉลี่ยต่อ group)
+    const maxPerGroupByWidth = Math.floor(avW / numGroups / deskWidth);
+    if (maxPerGroupByWidth < 2) continue;
+
     const minRows = config.rows ?? 1;
     const maxRows = config.rows ?? Math.floor((roomHeight + spacingY) / (deskHeight + spacingY));
 
     for (let rows = minRows; rows <= maxRows; rows++) {
       if (rows * deskHeight + (rows - 1) * spacingY > roomHeight) break;
-      const perRow = Math.ceil(totalDesks / rows);
-      const maxPerRow = Math.floor(avW / deskWidth);
-      if (perRow > maxPerRow) continue;
 
-      const patterns = getBalancedPatterns(perRow, numGroups, avW, deskWidth);
-      for (const pattern of patterns) {
-        const totalDeskW = pattern.reduce((sum, g) => sum + g * deskWidth, 0);
+      // fullRowDesks = โต๊ะต่อแถวปกติ (แถว 1 ถึง rows-1)
+      // lastRowDesks = โต๊ะแถวสุดท้าย (อาจน้อยกว่าถ้าเป็นเศษ)
+      const fullRowDesks = Math.ceil(totalDesks / rows);
+      const lastRowDesks = totalDesks - fullRowDesks * (rows - 1);
+      if (lastRowDesks <= 0) continue;
+
+      const maxPerRow = Math.floor(avW / deskWidth);
+      if (fullRowDesks > maxPerRow) continue;
+
+      // แถวปกติ: ทุก group >= 2 โต๊ะ
+      const fullPatterns = getBalancedPatterns(fullRowDesks, numGroups, avW, deskWidth, 2);
+      if (fullPatterns.length === 0) continue;
+
+      for (const fp of fullPatterns) {
+        const totalDeskW = fp.reduce((sum, g) => sum + g * deskWidth, 0);
         const layoutW = totalDeskW + walkwayW;
         if (layoutW > roomWidth) continue;
 
-        const key = `${numGroups}-${rows}-${pattern.join(",")}`;
+        const key = `${numGroups}-${rows}-${fp.join(",")}`;
         if (seen.has(key)) continue;
         seen.add(key);
 
         results.push({
-          id: `l-${numGroups}g-${rows}r-${pattern.join("-")}`,
-          name: `${numGroups} คอลัมน์ | ${rows} แถว [${pattern.join("-")}]`,
-          columns: numGroups, rows, pattern,
+          id: `l-${numGroups}g-${rows}r-${fp.join("-")}`,
+          name: `${numGroups - 1} ทางเดิน | ${rows} แถว [${fp.join("-")}]`,
+          columns: numGroups, rows, pattern: fp,
           deskWidth, deskHeight, spacingX, spacingY,
           totalDesks, layoutMode: "classroom",
         });
@@ -110,27 +127,51 @@ function classroomLayouts(config: LayoutConfig): LayoutResult[] {
   return results.slice(0, 20);
 }
 
-function getBalancedPatterns(total: number, groups: number, avW: number, deskWidth: number): number[][] {
-  if (groups === 1) return [[total]];
+/**
+ * สร้าง balanced patterns สำหรับ total โต๊ะใน groups กลุ่ม
+ * @param minPerGroup  2 = แถวปกติ (ห้ามมี group ที่มีโต๊ะ < 2)
+ *                     1 = แถวเศษสุดท้าย (บาง group อาจมี 1 โต๊ะได้)
+ */
+function getBalancedPatterns(
+  total: number,
+  groups: number,
+  avW: number,
+  deskWidth: number,
+  minPerGroup: number = 2
+): number[][] {
+  if (groups === 1) return total >= minPerGroup ? [[total]] : [];
   const maxPerGroup = Math.floor(avW / deskWidth);
   const base = Math.floor(total / groups);
+  if (base < minPerGroup) return [];
   const remainder = total % groups;
   const patterns: number[][] = [];
-  const balanced = Array(groups).fill(base);
-  for (let i = 0; i < remainder; i++) balanced[i]++;
-  if (balanced.every(g => g <= maxPerGroup && g > 0)) {
-    patterns.push([...balanced]);
-    const balancedEnd = Array(groups).fill(base);
-    for (let i = groups - remainder; i < groups; i++) balancedEnd[i]++;
-    if (balancedEnd.join(",") !== balanced.join(",")) patterns.push(balancedEnd);
+
+  // pattern A: เศษกระจายไว้หน้า
+  const pA = Array(groups).fill(base);
+  for (let i = 0; i < remainder; i++) pA[i]++;
+  if (pA.every((g: number) => g >= minPerGroup && g <= maxPerGroup)) {
+    patterns.push([...pA]);
   }
+
+  // pattern B: เศษกระจายไว้หลัง
+  const pB = Array(groups).fill(base);
+  for (let i = groups - remainder; i < groups; i++) pB[i]++;
+  if (pB.join(",") !== pA.join(",") && pB.every((g: number) => g >= minPerGroup && g <= maxPerGroup)) {
+    patterns.push([...pB]);
+  }
+
   return patterns;
 }
 
 export function generateLayouts(config: LayoutConfig): LayoutResult[] {
   const sx = Math.max(config.spacingX, DEFAULT_SPACING.MIN_SPACING_X);
   const sy = Math.max(config.spacingY, DEFAULT_SPACING.MIN_SPACING_Y);
-  const bd = Math.max(config.blackboardDepth ?? DEFAULT_SPACING.blackboardDepth, DEFAULT_SPACING.MIN_BLACKBOARD_DEPTH);
+
+  // exam: min = 0 (ไม่บังคับ), classroom: min = 1.5m
+  const minBd = config.layoutMode === "exam"
+    ? DEFAULT_SPACING.MIN_EXAM_BLACKBOARD_DEPTH
+    : DEFAULT_SPACING.MIN_BLACKBOARD_DEPTH;
+  const bd = Math.max(config.blackboardDepth ?? DEFAULT_SPACING.blackboardDepth, minBd);
 
   const c = {
     ...config,

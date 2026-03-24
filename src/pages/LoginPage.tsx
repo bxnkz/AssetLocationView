@@ -74,7 +74,7 @@ export default function LoginPage() {
 
               <div>
                 <label className="mb-2 block text-lg font-semibold text-teal-800">
-                  ชื่อผู้ใช้ / Email
+                  ชื่อผู้ใช้หรืออีเมล
                 </label>
 
                 <input
@@ -84,7 +84,7 @@ export default function LoginPage() {
                     setEmailOrUsername(e.target.value)
                   }
                   className="w-full rounded-md p-3"
-                  placeholder="กรอกชื่อผู้ใช้ / Email"
+                  placeholder="กรอกชื่อผู้ใช้หรืออีเมล"
                   required
                 />
               </div>

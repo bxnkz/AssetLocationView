@@ -294,7 +294,7 @@ function AppContent() {
                     { icon: "bi-table",               label: "ขนาดโต๊ะ",    value: `${lastConfig.deskWidth} × ${lastConfig.deskHeight} เมตร` },
                     { icon: "bi-distribute-horizontal", label: "ทางเดิน",   value: `${lastConfig.spacingX} เมตร` },
                     { icon: "bi-distribute-vertical", label: "ระยะแถว",     value: `${lastConfig.spacingY} เมตร` },
-                    { icon: "bi-easel",               label: "หน้ากระดาน",  value: `${lastConfig.blackboardDepth} เมตร` },
+                    { icon: "bi-easel",               label: "หน้าห้อง",  value: `${lastConfig.blackboardDepth} เมตร` },
                   ].map(({ icon, label, value }) => (
                     <div key={label} className="flex items-start gap-2">
                       <i className={`bi ${icon} text-[#006B67] text-sm mt-0.5 shrink-0`}></i>
@@ -385,7 +385,7 @@ function AppContent() {
             <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur border-t border-gray-100 px-6 py-2
                             flex items-center gap-3 text-xs text-gray-400">
               <i className="bi bi-check-circle text-emerald-500"></i>
-              <span>บันทึกโดย <span className="font-medium text-gray-600">{user.name}</span></span>
+              <span>บันทึกโดย <span className="font-medium text-gray-600">{savedMeta.savedBy}</span></span>
               <span>·</span>
               <span>{savedMeta.updatedAt && new Date(savedMeta.updatedAt).toLocaleString("th-TH")}</span>
               <span>·</span>

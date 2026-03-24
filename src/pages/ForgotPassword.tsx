@@ -58,7 +58,7 @@ export default function ForgotPassword() {
               ลืมรหัสผ่าน
             </h2>
             <p className="text-center text-sm text-gray-500 mb-6">
-              กรอก Email ที่ลงทะเบียนไว้ ระบบจะส่งลิงก์รีเซ็ตให้
+              กรอกอีเมลที่ลงทะเบียนไว้ ระบบจะส่งลิงก์รีเซ็ตให้
             </p>
 
             {message && (
@@ -75,13 +75,13 @@ export default function ForgotPassword() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="mb-1.5 block text-base font-semibold text-teal-800">
-                  Email
+                  อีเมล
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="กรอก Email"
+                  placeholder="กรอกอีเมล"
                   required
                   className="w-full rounded-md border-none p-3 text-gray-700 shadow-inner outline-none focus:ring-2 focus:ring-teal-600"
                 />
