@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useDialog } from "../hooks/useDialog";
 import "../index.css";
 
 interface User {
@@ -15,6 +16,7 @@ const PROTECTED_USERS = ["Dev", "Dev2"];
 
 export default function ManageUsers() {
   const navigate = useNavigate();
+  const { toast, confirm } = useDialog();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [changingRole, setChangingRole] = useState<string | null>(null);
@@ -53,8 +55,9 @@ export default function ManageUsers() {
       setUsers((prev) =>
         prev.map((u) => (u._id === id ? { ...u, role: res.data.user.role } : u))
       );
+      toast("เปลี่ยน Role สำเร็จ", "success");
     } catch (err: any) {
-      alert(err.response?.data?.message || "เปลี่ยน role ไม่สำเร็จ");
+      toast(err.response?.data?.message || "เปลี่ยน role ไม่สำเร็จ", "error");
     } finally {
       setChangingRole(null);
     }
@@ -62,15 +65,16 @@ export default function ManageUsers() {
 
   const deleteUser = async (id: string, role: string) => {
     if (role === "admin") {
-      alert("ไม่สามารถลบ Admin ได้ — กรุณาเปลี่ยน Role เป็น User ก่อน");
+      toast("ไม่สามารถลบ Admin ได้ — กรุณาเปลี่ยน Role เป็น User ก่อน", "error");
       return;
     }
-    if (!confirm("ยืนยันการลบผู้ใช้?")) return;
+    if (!await confirm("ยืนยันการลบผู้ใช้?")) return;
     try {
       await axios.delete(`http://localhost:5000/api/users/${id}`, { headers });
       setUsers((prev) => prev.filter((u) => u._id !== id));
+      toast("ลบผู้ใช้สำเร็จ", "success");
     } catch (err: any) {
-      alert(err.response?.data?.message || "ลบไม่สำเร็จ");
+      toast(err.response?.data?.message || "ลบไม่สำเร็จ", "error");
     }
   };
 

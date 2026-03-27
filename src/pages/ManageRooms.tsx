@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useDialog } from "../hooks/useDialog";
 import "../index.css";
 
 interface RoomData {
@@ -11,6 +12,7 @@ interface RoomData {
 
 export default function ManageRooms() {
   const navigate = useNavigate();
+  const { toast, confirm } = useDialog();
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -107,9 +109,9 @@ export default function ManageRooms() {
   };
 
   const deleteRoom = async (building: string, floor: string, room: string) => {
-    if (!confirm(`ยืนยันการลบห้อง ${room}?`)) return;
+    if (!await confirm(`ยืนยันการลบห้อง ${room}?\nหากห้องนี้มี Layout บันทึกไว้จะถูกลบออกด้วย`)) return;
     try {
-      await axios.delete(
+      const res = await axios.delete(
         `http://localhost:5000/api/rooms/${building}/${floor}/${room}`
       );
       setRooms((prev) =>
@@ -118,8 +120,15 @@ export default function ManageRooms() {
             !(r.building === building && r.floor === floor && r.room === room)
         )
       );
+      const layoutsDeleted = res.data?.layoutsDeleted ?? 0;
+      toast(
+        layoutsDeleted > 0
+          ? `ลบห้อง ${room} และ Layout สำเร็จ`
+          : `ลบห้อง ${room} สำเร็จ`,
+        "success"
+      );
     } catch (err: any) {
-      alert(err.response?.data?.message || "ลบไม่สำเร็จ");
+      toast(err.response?.data?.message || "ลบไม่สำเร็จ", "error");
     }
   };
 
@@ -305,7 +314,7 @@ export default function ManageRooms() {
               <input
                 type="text"
                 inputMode="numeric"
-                placeholder="15"
+                placeholder="เช่น 15, 26"
                 value={newBuilding}
                 onChange={(e) => {
                   const v = toInt(e.target.value);
@@ -324,7 +333,7 @@ export default function ManageRooms() {
               <input
                 type="text"
                 inputMode="numeric"
-                placeholder="1"
+                placeholder="เช่น 1, 5"
                 value={newFloor}
                 onChange={(e) => {
                   const v = toInt(e.target.value);
@@ -342,7 +351,7 @@ export default function ManageRooms() {
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">
                 เลขห้อง
-                <span className="text-xs text-gray-400 ml-1">(2 หลัก, 01–99)</span>
+                <span className="text-xs text-gray-400 ml-1">(2 หลัก, 00–99)</span>
               </label>
               <div className="flex items-center gap-0">
                 {/* prefix ล็อค */}

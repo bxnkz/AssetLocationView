@@ -17,6 +17,7 @@ import ManageUsers from "./pages/ManageUsers";
 import ManageRooms from "./pages/ManageRooms";
 
 import LayoutPreviewGrid from "./components/LayoutPreviewGrid";
+import { useDialog } from "./hooks/useDialog";
 
 import {
   generateLayouts,
@@ -61,7 +62,7 @@ function AppContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [saving, setSaving]           = useState(false);
-  const [toast, setToast]             = useState<{ ok: boolean; msg: string } | null>(null);
+  const { toast: dlgToast, confirm } = useDialog();
 
   // ── Infinite canvas ──────────────────────────────────────────
   const stageRef      = useRef<Konva.Stage>(null);
@@ -123,10 +124,7 @@ function AppContent() {
     }
   }, []);
 
-  const notify = (ok: boolean, msg: string) => {
-    setToast({ ok, msg });
-    setTimeout(() => setToast(null), 3000);
-  };
+  const notify = (ok: boolean, msg: string) => dlgToast(msg, ok ? "success" : "error");
 
   const loadLayout = useCallback(async (b: string, f: string, r: string) => {
     setGeneratedLayouts([]);
@@ -214,7 +212,7 @@ function AppContent() {
   };
 
   const deleteLayout = async () => {
-    if (!confirm("ลบ Layout นี้ออกจากระบบ?")) return;
+    if (!await confirm("ลบ Layout นี้ออกจากระบบ?")) return;
     try {
       await axios.delete(`http://localhost:5000/api/layout/${building}/${floor}/${room}`);
       setCurrentDesks([]); setRoomRect({ width: 0, height: 0 });
@@ -255,14 +253,6 @@ function AppContent() {
    */
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: "#f3f4f6", overflow: "hidden" }}>
-
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium
-          ${toast.ok ? "bg-emerald-500" : "bg-red-500"}`}>
-          {toast.msg}
-        </div>
-      )}
 
       {/* Navbar */}
       <div style={{ flexShrink: 0 }}>
@@ -420,11 +410,11 @@ function AppContent() {
                 <div className="bg-white/90 backdrop-blur rounded-xl border border-gray-100 shadow-lg p-3 space-y-2">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">การตั้งค่าปัจจุบัน</p>
                   {[
-                    { icon: "bi-aspect-ratio",         label: "ขนาดห้อง",   value: `${lastConfig.roomWidth} × ${lastConfig.roomHeight} เมตร` },
-                    { icon: "bi-table",                 label: "ขนาดโต๊ะ",   value: `${lastConfig.deskWidth} × ${lastConfig.deskHeight} เมตร` },
-                    { icon: "bi-distribute-horizontal", label: "ทางเดิน",    value: `${lastConfig.spacingX} เมตร` },
-                    { icon: "bi-distribute-vertical",   label: "ระยะแถว",    value: `${lastConfig.spacingY} เมตร` },
-                    { icon: "bi-easel",                 label: "หน้ากระดาน", value: `${lastConfig.blackboardDepth} เมตร` },
+                    { icon: "bi-aspect-ratio",         label: "ขนาดห้อง",   value: `${lastConfig.roomWidth} × ${lastConfig.roomHeight} ม.` },
+                    { icon: "bi-table",                 label: "ขนาดโต๊ะ",   value: `${lastConfig.deskWidth} × ${lastConfig.deskHeight} ม.` },
+                    { icon: "bi-distribute-horizontal", label: "ทางเดิน",    value: `${lastConfig.spacingX} ม.` },
+                    { icon: "bi-distribute-vertical",   label: "ระยะแถว",    value: `${lastConfig.spacingY} ม.` },
+                    { icon: "bi-easel",                 label: "หน้ากระดาน", value: `${lastConfig.blackboardDepth} ม.` },
                   ].map(({ icon, label, value }) => (
                     <div key={label} className="flex items-start gap-1.5">
                       <i className={`bi ${icon} text-[#006B67] text-xs mt-0.5 shrink-0`} />

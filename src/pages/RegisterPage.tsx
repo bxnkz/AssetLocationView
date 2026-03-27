@@ -1,10 +1,12 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { useDialog } from "../hooks/useDialog";
 import "../index.css";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { toast } = useDialog();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -19,7 +21,7 @@ export default function RegisterPage() {
       await axios.post("http://localhost:5000/api/auth/register", {
         username, email, name, password,
       });
-      alert("สมัครสมาชิกสำเร็จ");
+      toast("สมัครสมาชิกสำเร็จ", "success");
       navigate("/");
     } catch (err: any) {
       setError(err.response?.data?.message || "สมัครสมาชิกไม่สำเร็จ");
