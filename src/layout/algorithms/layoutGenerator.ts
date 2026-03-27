@@ -111,7 +111,7 @@ function classroomLayouts(config: LayoutConfig): LayoutResult[] {
 
         results.push({
           id: `l-${numGroups}g-${rows}r-${fp.join("-")}`,
-          name: `${numGroups - 1} ทางเดิน | ${rows} แถว [${fp.join("-")}]`,
+          name: `${numGroups - 1} ทางเดิน | [${fp.join("-")}]`,
           columns: numGroups, rows, pattern: fp,
           deskWidth, deskHeight, spacingX, spacingY,
           totalDesks, layoutMode: "classroom",

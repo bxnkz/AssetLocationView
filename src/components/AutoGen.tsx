@@ -132,21 +132,80 @@ const AutoGen = ({ isOpen, onClose, onGenerate }: AutoGenProps) => {
           ))}
         </div>
 
-        {/* Required fields — step="0.1" ทุกช่องยกเว้นโต๊ะ */}
-        {[
-          { key: "roomWidth",  label: "ความกว้างห้อง (เมตร)",  step: "0.1" },
-          { key: "roomHeight", label: "ความยาวห้อง (เมตร)",    step: "0.1" },
-          { key: "deskWidth",  label: "ความกว้างโต๊ะ (เมตร)",  step: "0.1" },
-          { key: "deskHeight", label: "ความยาวโต๊ะ (เมตร)",    step: "0.1" },
-        ].map(({ key, label, step }) => (
-          <div key={key} className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">{label}</label>
-            <input type="number" min="0.1" step={step}
-              value={config[key as keyof LayoutConfig] as number ?? ""}
-              onChange={e => handleChange(key as keyof LayoutConfig, e.target.value)}
-              className={inputClass} />
+        {/* ขนาดห้อง — กว้าง + ยาว แถวเดียวกัน */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-gray-700">ขนาดห้อง (เมตร)</label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">กว้าง</span>
+              <input type="number" min="0.1" step="0.1"
+                value={config.roomWidth ?? ""}
+                onChange={e => handleChange("roomWidth", e.target.value)}
+                className="w-full border border-gray-200 rounded-lg pl-11 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#006B67]/30 focus:border-[#006B67]" />
+            </div>
+            <span className="text-gray-400 text-sm shrink-0">×</span>
+            <div className="flex-1 relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">ยาว</span>
+              <input type="number" min="0.1" step="0.1"
+                value={config.roomHeight ?? ""}
+                onChange={e => handleChange("roomHeight", e.target.value)}
+                className="w-full border border-gray-200 rounded-lg pl-9 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#006B67]/30 focus:border-[#006B67]" />
+            </div>
           </div>
-        ))}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <i className="bi bi-lightbulb text-amber-400 text-xs"></i>
+            <span className="text-xs text-gray-400">ใช้บ่อย:</span>
+            {[{ w: 8.1, h: 8.1, label: "8.1 × 8.1" }].map(p => (
+              <button key={p.label} type="button"
+                onClick={() => { set("roomWidth", p.w); set("roomHeight", p.h); }}
+                className={`text-xs px-2 py-0.5 rounded-full border transition
+                  ${config.roomWidth === p.w && config.roomHeight === p.h
+                    ? "bg-[#006B67] text-white border-[#006B67]"
+                    : "border-gray-200 text-[#006B67] hover:border-[#006B67]/50 hover:bg-[#006B67]/5"}`}>
+                {p.label} ม.
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ขนาดโต๊ะ — กว้าง + ยาว แถวเดียวกัน */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-gray-700">ขนาดโต๊ะ (เมตร)</label>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">กว้าง</span>
+              <input type="number" min="0.1" step="0.1"
+                value={config.deskWidth ?? ""}
+                onChange={e => handleChange("deskWidth", e.target.value)}
+                className="w-full border border-gray-200 rounded-lg pl-11 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#006B67]/30 focus:border-[#006B67]" />
+            </div>
+            <span className="text-gray-400 text-sm shrink-0">×</span>
+            <div className="flex-1 relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">ยาว</span>
+              <input type="number" min="0.1" step="0.1"
+                value={config.deskHeight ?? ""}
+                onChange={e => handleChange("deskHeight", e.target.value)}
+                className="w-full border border-gray-200 rounded-lg pl-9 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#006B67]/30 focus:border-[#006B67]" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <i className="bi bi-lightbulb text-amber-400 text-xs"></i>
+            <span className="text-xs text-gray-400">ใช้บ่อย:</span>
+            {[
+              { w: 1.5, h: 0.6, label: "1.5 × 0.6 คอม",      modes: ["classroom"] },
+              { w: 0.8, h: 0.6, label: "0.8 × 0.6 เลคเชอร์", modes: ["classroom", "exam"] },
+            ].filter(p => p.modes.includes(config.layoutMode)).map(p => (
+              <button key={p.label} type="button"
+                onClick={() => { set("deskWidth", p.w); set("deskHeight", p.h); }}
+                className={`text-xs px-2 py-0.5 rounded-full border transition
+                  ${config.deskWidth === p.w && config.deskHeight === p.h
+                    ? "bg-[#006B67] text-white border-[#006B67]"
+                    : "border-gray-200 text-[#006B67] hover:border-[#006B67]/50 hover:bg-[#006B67]/5"}`}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* จำนวนโต๊ะ — step="1" เพราะเป็นจำนวนเต็ม, max = ความจุสูงสุด */}
         <div className="space-y-1">

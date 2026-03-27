@@ -18,8 +18,18 @@ export default function ManageUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [changingRole, setChangingRole] = useState<string | null>(null);
+
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
+
+  // ดึง username ของผู้ใช้ที่ login อยู่ เพื่อป้องกันการเปลี่ยน role ตัวเอง
+  const currentUser: { username: string } | null = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "null"); }
+    catch { return null; }
+  })();
+
+  const isCurrentUser = (username: string) =>
+    currentUser?.username === username;
 
   const loadUsers = async () => {
     try {
@@ -40,7 +50,9 @@ export default function ManageUsers() {
         { role: newRole },
         { headers }
       );
-      setUsers(prev => prev.map(u => u._id === id ? { ...u, role: res.data.user.role } : u));
+      setUsers((prev) =>
+        prev.map((u) => (u._id === id ? { ...u, role: res.data.user.role } : u))
+      );
     } catch (err: any) {
       alert(err.response?.data?.message || "เปลี่ยน role ไม่สำเร็จ");
     } finally {
@@ -56,13 +68,24 @@ export default function ManageUsers() {
     if (!confirm("ยืนยันการลบผู้ใช้?")) return;
     try {
       await axios.delete(`http://localhost:5000/api/users/${id}`, { headers });
-      setUsers(prev => prev.filter(u => u._id !== id));
+      setUsers((prev) => prev.filter((u) => u._id !== id));
     } catch (err: any) {
       alert(err.response?.data?.message || "ลบไม่สำเร็จ");
     }
   };
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  // ตรวจว่า row นี้ถูกล็อคจากการเปลี่ยน role หรือไม่ พร้อม reason
+  const getRoleLockReason = (user: User): string | null => {
+    if (PROTECTED_USERS.includes(user.username))
+      return "ไม่สามารถเปลี่ยน Role ของ account นี้ได้";
+    if (isCurrentUser(user.username))
+      return "ไม่สามารถเปลี่ยน Role ของตัวเองได้";
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -94,7 +117,10 @@ export default function ManageUsers() {
         {/* Info banner */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5 flex items-start gap-2 text-sm text-amber-700">
           <i className="bi bi-info-circle mt-0.5 shrink-0"></i>
-          <span>Admin ไม่สามารถถูกลบได้ — ต้องเปลี่ยน Role เป็น User ก่อนจึงจะลบออกจากระบบได้</span>
+          <span>
+            Admin ไม่สามารถถูกลบได้ — ต้องเปลี่ยน Role เป็น User ก่อน
+            และ Admin ไม่สามารถเปลี่ยน Role ของตัวเองได้เพื่อป้องกันการหลุดสิทธิ์
+          </span>
         </div>
 
         {/* Table */}
@@ -121,73 +147,95 @@ export default function ManageUsers() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {users.map(user => (
-                  <tr key={user._id} className="hover:bg-gray-50 transition">
-                    <td className="px-5 py-3.5 font-medium text-gray-800">{user.name}</td>
-                    <td className="px-5 py-3.5 text-gray-600">{user.username}</td>
-                    <td className="px-5 py-3.5 text-gray-500">{user.email}</td>
+                {users.map((user) => {
+                  const roleLockReason = getRoleLockReason(user);
+                  const isSelf = isCurrentUser(user.username);
 
-                    {/* Role dropdown */}
-                    <td className="px-5 py-3.5">
-                      {PROTECTED_USERS.includes(user.username) ? (
-                        // protected user — แสดง badge ล็อค ไม่ให้แก้
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border
-                            ${user.role === "admin"
-                              ? "bg-[#006B67]/10 border-[#006B67]/30 text-[#006B67]"
-                              : "bg-gray-100 border-gray-200 text-gray-600"
-                            }`}>
-                            {user.role === "admin" ? "Admin" : "User"}
-                          </span>
-                          <span title="ไม่สามารถเปลี่ยน Role ได้" className="text-gray-400 cursor-not-allowed">
-                            <i className="bi bi-lock text-xs"></i>
-                          </span>
+                  return (
+                    <tr
+                      key={user._id}
+                      className={`hover:bg-gray-50 transition ${isSelf ? "bg-[#006B67]/3" : ""}`}
+                    >
+                      <td className="px-5 py-3.5 font-medium text-gray-800">
+                        <div className="flex items-center gap-2">
+                          {user.name}
+                          {isSelf && (
+                            <span className="text-xs bg-[#006B67]/10 text-[#006B67] px-2 py-0.5 rounded-full font-medium">
+                              คุณ
+                            </span>
+                          )}
                         </div>
-                      ) : (
-                        <div className="relative inline-block">
-                          <select
-                            value={user.role}
-                            disabled={changingRole === user._id}
-                            onChange={e => changeRole(user._id, e.target.value)}
-                            className={`appearance-none text-xs font-semibold px-3 py-1.5 pr-7 rounded-full border cursor-pointer
-                              focus:outline-none focus:ring-2 focus:ring-[#006B67]/30 transition
+                      </td>
+                      <td className="px-5 py-3.5 text-gray-600">{user.username}</td>
+                      <td className="px-5 py-3.5 text-gray-500">{user.email}</td>
+
+                      {/* Role */}
+                      <td className="px-5 py-3.5">
+                        {roleLockReason ? (
+                          // ล็อค — แสดง badge + ไอคอนกุญแจ
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border
                               ${user.role === "admin"
                                 ? "bg-[#006B67]/10 border-[#006B67]/30 text-[#006B67]"
                                 : "bg-gray-100 border-gray-200 text-gray-600"
-                              }
-                              ${changingRole === user._id ? "opacity-60 cursor-not-allowed" : ""}
-                            `}
-                          >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                            <i className={`text-xs opacity-60 ${changingRole === user._id ? "bi bi-arrow-repeat" : "bi bi-chevron-down"}`}></i>
+                              }`}>
+                              {user.role === "admin" ? "Admin" : "User"}
+                            </span>
+                            <span title={roleLockReason} className="text-gray-400 cursor-help">
+                              <i className="bi bi-lock text-xs"></i>
+                            </span>
                           </div>
-                        </div>
-                      )}
-                    </td>
+                        ) : (
+                          // dropdown เปลี่ยนได้
+                          <div className="relative inline-block">
+                            <select
+                              value={user.role}
+                              disabled={changingRole === user._id}
+                              onChange={(e) => changeRole(user._id, e.target.value)}
+                              className={`appearance-none text-xs font-semibold px-3 py-1.5 pr-7 rounded-full border cursor-pointer
+                                focus:outline-none focus:ring-2 focus:ring-[#006B67]/30 transition
+                                ${user.role === "admin"
+                                  ? "bg-[#006B67]/10 border-[#006B67]/30 text-[#006B67]"
+                                  : "bg-gray-100 border-gray-200 text-gray-600"
+                                }
+                                ${changingRole === user._id ? "opacity-60 cursor-not-allowed" : ""}
+                              `}
+                            >
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                              <i className={`text-xs opacity-60 ${changingRole === user._id ? "bi bi-arrow-repeat" : "bi bi-chevron-down"}`}></i>
+                            </div>
+                          </div>
+                        )}
+                      </td>
 
-                    {/* Delete */}
-                    <td className="px-5 py-3.5 text-right">
-                      {PROTECTED_USERS.includes(user.username) || user.role === "admin" ? (
-                        <span
-                          title={PROTECTED_USERS.includes(user.username) ? "ไม่สามารถลบ Dev account ได้" : "เปลี่ยน Role เป็น User ก่อนจึงจะลบได้"}
-                          className="text-gray-300 text-xs px-3 py-1.5 cursor-not-allowed select-none"
-                        >
-                          <i className="bi bi-trash mr-1"></i>ลบ
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => deleteUser(user._id, user.role)}
-                          className="text-red-400 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition text-xs font-medium"
-                        >
-                          <i className="bi bi-trash mr-1"></i>ลบ
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      {/* Delete */}
+                      <td className="px-5 py-3.5 text-right">
+                        {PROTECTED_USERS.includes(user.username) || user.role === "admin" ? (
+                          <span
+                            title={
+                              PROTECTED_USERS.includes(user.username)
+                                ? "ไม่สามารถลบ account นี้ได้"
+                                : "เปลี่ยน Role เป็น User ก่อนจึงจะลบได้"
+                            }
+                            className="text-gray-300 text-xs px-3 py-1.5 cursor-not-allowed select-none"
+                          >
+                            <i className="bi bi-trash mr-1"></i>ลบ
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => deleteUser(user._id, user.role)}
+                            className="text-red-400 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition text-xs font-medium"
+                          >
+                            <i className="bi bi-trash mr-1"></i>ลบ
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
